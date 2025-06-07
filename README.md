@@ -24,8 +24,8 @@
 
 ### 2. Cài đặt và chạy app
 
-```bash
-git clone https://github.com/your_username/notebot-notion.git
+```bash[
+git clone https://github.com/your_username/notebot-notion.git](https://github.com/TrNghia16509/NoteBot/blob/main/app_notion.py)
 cd notebot-notion
 pip install -r requirements.txt
 streamlit run app_notion.py
