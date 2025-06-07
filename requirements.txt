@@ -31,7 +31,6 @@ narwhals==1.35.0
 networkx==3.4.2
 numba==0.61.2
 numpy==1.26.4
-openai-whisper==20231117
 packaging==23.2
 pandas==2.2.3
 pdfkit==1.0.0
