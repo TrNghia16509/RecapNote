@@ -3,8 +3,7 @@ notion-client
 openai-whisper
 google-generativeai
 python-dotenv
-ffmpeg-python
 torch==2.2.2
 torchaudio==2.2.2
-numpy
+numpy==1.24.4
 pandas
