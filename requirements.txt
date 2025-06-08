@@ -3,5 +3,4 @@ notion-client
 openai-whisper
 google-generativeai
 python-dotenv
-pydub
 ffmpeg-python
