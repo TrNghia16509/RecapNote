@@ -4,7 +4,7 @@ openai-whisper
 google-generativeai
 python-dotenv
 ffmpeg-python
-torch==2.1.2
-torchaudio==2.1.2
+torch==2.2.2
+torchaudio==2.2.2
 numpy
 pandas
