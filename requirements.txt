@@ -3,7 +3,7 @@ notion-client
 openai-whisper
 google-generativeai
 python-dotenv
-torch==2.2.2
-torchaudio==2.2.2
+torch==2.1.0
+torchaudio==2.1.0
 numpy==1.24.4
 pandas
