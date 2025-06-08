@@ -1,6 +1,6 @@
 streamlit
 notion-client
-openai-whisper
+faster-whisper
 google-generativeai
 python-dotenv
 torch==2.1.0
