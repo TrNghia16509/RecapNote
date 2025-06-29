@@ -13,6 +13,184 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
+# Định nghĩa cấu trúc tóm tắt cho từng môn học
+SUBJECT_TEMPLATES = {
+    "Toán học": """
+    1. KHÁI NIỆM & ĐỊNH LÝ:
+    - Các định nghĩa và khái niệm mới
+    - Các định lý và công thức quan trọng
+    - Điều kiện áp dụng
+
+    2. PHƯƠNG PHÁP & KỸ THUẬT:
+    - Các phương pháp giải chính
+    - Kỹ thuật tính toán
+    - Các bước giải quan trọng
+
+    3. VÍ DỤ & BÀI TẬP MẪU:
+    - Phân tích các ví dụ tiêu biểu
+    - Các dạng bài tập điển hình
+
+    4. GHI CHÚ HỌC TẬP:
+    - Các lỗi thường gặp cần tránh
+    - Mẹo và thủ thuật giải nhanh
+    - Liên hệ với các chủ đề khác
+    """,
+    
+    "Vật lý": """
+    1. NGUYÊN LÝ & ĐỊNH LUẬT:
+    - Các định luật vật lý mới
+    - Nguyên lý hoạt động
+    - Các công thức quan trọng
+
+    2. HIỆN TƯỢNG & ỨNG DỤNG:
+    - Giải thích hiện tượng
+    - Ứng dụng thực tế
+    - Thí nghiệm liên quan
+
+    3. PHÂN TÍCH ĐỊNH LƯỢNG:
+    - Các đại lượng và đơn vị
+    - Quan hệ giữa các đại lượng
+    - Phương pháp giải bài tập
+
+    4. GHI CHÚ HỌC TẬP:
+    - Các điểm cần lưu ý
+    - Liên hệ với các chương khác
+    - Câu hỏi ôn tập quan trọng
+    """,
+    
+    "Hóa học": """
+    1. KHÁI NIỆM & PHẢN ỨNG:
+    - Định nghĩa và khái niệm mới
+    - Các phản ứng hóa học chính
+    - Điều kiện phản ứng
+
+    2. CƠ CHẾ & QUY LUẬT:
+    - Cơ chế phản ứng
+    - Các quy luật quan trọng
+    - Yếu tố ảnh hưởng
+
+    3. THỰC HÀNH & ỨNG DỤNG:
+    - Phương pháp thí nghiệm
+    - Ứng dụng trong thực tế
+    - Các bài toán thực tế
+
+    4. GHI CHÚ HỌC TẬP:
+    - Các công thức cần nhớ
+    - Phương pháp giải bài tập
+    - Lưu ý an toàn thí nghiệm
+    """,
+    
+    "Sinh học": """
+    1. CẤU TRÚC & CHỨC NĂNG:
+    - Cấu tạo và đặc điểm
+    - Chức năng và vai trò
+    - Mối quan hệ cấu trúc-chức năng
+
+    2. QUÁ TRÌNH & CƠ CHẾ:
+    - Các quá trình sinh học
+    - Cơ chế hoạt động
+    - Các yếu tố ảnh hưởng
+
+    3. PHÂN LOẠI & ĐẶC ĐIỂM:
+    - Tiêu chí phân loại
+    - Đặc điểm nhận dạng
+    - So sánh và phân biệt
+
+    4. GHI CHÚ HỌC TẬP:
+    - Thuật ngữ chuyên ngành
+    - Sơ đồ và hình vẽ quan trọng
+    - Câu hỏi trọng tâm
+    """,
+    
+    "Văn học": """
+    1. TÁC PHẨM & TÁC GIẢ:
+    - Thông tin về tác giả
+    - Hoàn cảnh sáng tác
+    - Ý nghĩa tác phẩm
+
+    2. PHÂN TÍCH & ĐÁNH GIÁ:
+    - Nội dung chính
+    - Nghệ thuật đặc sắc
+    - Ý nghĩa văn học - xã hội
+
+    3. CHỦ ĐỀ & TƯ TƯỞNG:
+    - Chủ đề chính
+    - Tư tưởng nổi bật
+    - Giá trị nhân văn
+
+    4. GHI CHÚ HỌC TẬP:
+    - Dàn ý phân tích
+    - Các dẫn chứng tiêu biểu
+    - Câu hỏi thảo luận
+    """,
+    
+    "Lịch sử": """
+    1. SỰ KIỆN & NHÂN VẬT:
+    - Thời gian và địa điểm
+    - Nhân vật lịch sử
+    - Diễn biến chính
+
+    2. NGUYÊN NHÂN & HỆ QUẢ:
+    - Bối cảnh lịch sử
+    - Nguyên nhân sự kiện
+    - Kết quả và tác động
+
+    3. Ý NGHĨA & ĐÁNH GIÁ:
+    - Ý nghĩa lịch sử
+    - Bài học kinh nghiệm
+    - Đánh giá khách quan
+
+    4. GHI CHÚ HỌC TẬP:
+    - Mốc thời gian quan trọng
+    - Sơ đồ diễn biến
+    - Câu hỏi ôn tập
+    """,
+    
+    "Địa lý": """
+    1. ĐẶC ĐIỂM & PHÂN BỐ:
+    - Vị trí địa lý
+    - Đặc điểm tự nhiên
+    - Phân bố không gian
+
+    2. MỐI QUAN HỆ & TÁC ĐỘNG:
+    - Quan hệ nhân-quả
+    - Tác động qua lại
+    - Ảnh hưởng đến đời sống
+
+    3. THỰC TRẠNG & XU HƯỚNG:
+    - Hiện trạng phát triển
+    - Xu hướng biến đổi
+    - Dự báo tương lai
+
+    4. GHI CHÚ HỌC TẬP:
+    - Số liệu quan trọng
+    - Bản đồ và biểu đồ
+    - Các vấn đề thực tế
+    """,
+    
+    "Khác": """
+    1. KHÁI NIỆM CHÍNH:
+    - Định nghĩa và thuật ngữ
+    - Phạm vi áp dụng
+    - Ý nghĩa quan trọng
+
+    2. NỘI DUNG TRỌNG TÂM:
+    - Các điểm chính
+    - Mối liên hệ
+    - Ứng dụng thực tế
+
+    3. PHÂN TÍCH & ĐÁNH GIÁ:
+    - Ưu điểm và hạn chế
+    - So sánh và phân biệt
+    - Nhận xét tổng hợp
+
+    4. GHI CHÚ HỌC TẬP:
+    - Các điểm cần nhớ
+    - Câu hỏi ôn tập
+    - Hướng nghiên cứu thêm
+    """
+}
+
 # Whisper model cache
 @st.cache_resource
 def load_whisper_model():
@@ -77,13 +255,17 @@ def correct_text(text):
 def summarize_text(text, subject):
     try:
         model = genai.GenerativeModel('gemini-3.5-flash')
+        template = SUBJECT_TEMPLATES.get(subject, SUBJECT_TEMPLATES["Khác"])
         prompt = f"""Với tư cách là một trợ lý học tập chuyên môn về {subject}, 
         hãy phân tích và tóm tắt nội dung sau đây theo cấu trúc dành cho môn {subject}:
 
         NỘI DUNG:
         {text}
+        
+        Hãy tổ chức bản tóm tắt theo cấu trúc sau:
+        {template}
 
-        Hãy trình bày rõ ràng, súc tích và dễ hiểu bằng tiếng Việt."""
+        Hãy trình bày rõ ràng, súc tích và dễ hiểu trong 2000 từ bằng tiếng Việt."""
         return model.generate_content(prompt).text.strip()
     except:
         return "Không có tóm tắt"
