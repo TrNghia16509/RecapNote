@@ -1,5 +1,5 @@
 import streamlit as st
-from notion_client import Client
+import sqlite3
 from datetime import datetime
 from faster_whisper import WhisperModel
 import tempfile
@@ -7,6 +7,10 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 from pydub import AudioSegment
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
+import av
+import numpy as np
+import queue
 
 # Load môi trường cho Gemini
 load_dotenv()
@@ -285,6 +289,42 @@ def generate_title(text, subject):
     except:
         return f"Bài ghi {datetime.now().strftime('%d/%m/%Y')}"
 
+# Kết nối SQLite
+conn = sqlite3.connect("notes.db", check_same_thread=False)
+c = conn.cursor()
+c.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
+c.execute('''CREATE TABLE IF NOT EXISTS notes (username TEXT, title TEXT, subject TEXT, summary TEXT, content TEXT, timestamp TEXT)''')
+conn.commit()
+
+# ====================== Đăng nhập ở Sidebar ======================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+
+def login_sidebar():
+    st.sidebar.title("🔐 Tài khoản")
+    username = st.sidebar.text_input("Tên người dùng")
+    password = st.sidebar.text_input("Mật khẩu", type="password")
+    if st.sidebar.button("Đăng nhập / Đăng ký"):
+        user = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+        if user:
+            if user[1] == password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.sidebar.success("✅ Đăng nhập thành công")
+            else:
+                st.sidebar.error("❌ Sai mật khẩu")
+        else:
+            c.execute("INSERT INTO users VALUES (?, ?)", (username, password))
+            conn.commit()
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.sidebar.success("✅ Đăng ký và đăng nhập thành công")
+
+if not st.session_state.logged_in:
+    login_sidebar()
+    st.stop()
+
 # ======================= CHATBOX =======================
 
 def run_chatbox(context_text):
@@ -306,54 +346,184 @@ def run_chatbox(context_text):
 
         st.session_state.messages.append({"role": "user", "content": user_input})
         st.session_state.messages.append({"role": "assistant", "content": response.text})
+        
+# ==================== RECORD AUDIO ====================
+audio_queue = queue.Queue()
+recorded_audio_path = "recorded_audio.wav"
+
+# Chế độ hiển thị hội thoại
+st.sidebar.markdown("### ⚙️ Tuỳ chọn")
+chat_mode = st.sidebar.radio("Chế độ hiển thị văn bản", ["Hội thoại (Người 1/2)", "Thông thường"])
+
+class AudioProcessor:
+    def __init__(self):
+        self.frames = []
+        self.partial_text = ""
+        self.model = load_whisper_model()
+        self.speaker_index = 1
+
+    def recv(self, frame):
+        audio = frame.to_ndarray()
+        self.frames.append(audio)
+
+        if len(self.frames) >= 5:
+            audio_data = np.concatenate(self.frames[-5:])
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                with wave.open(tmp.name, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)
+                    wf.setframerate(48000)
+                    wf.writeframes(audio_data.tobytes())
+                try:
+                    segments, _ = self.model.transcribe(tmp.name, language="vi")
+                    for seg in segments:
+                        if chat_mode == "Hội thoại (Người 1/2)":
+                            self.partial_text += f"\n👤 Người {self.speaker_index}: {seg.text.strip()}"
+                            self.speaker_index = 2 if self.speaker_index == 1 else 1
+                        else:
+                            self.partial_text += f" {seg.text.strip()}"
+                except:
+                    pass
+
+        return frame
+
+    def save_audio(self):
+        if self.frames:
+            audio_data = np.concatenate(self.frames)
+            with wave.open(recorded_audio_path, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(48000)
+                wf.writeframes(audio_data.tobytes())
+            return recorded_audio_path
+        return None
+
+ctx = webrtc_streamer(
+    key="mic",
+    mode=WebRtcMode.SENDONLY,
+    client_settings=ClientSettings(media_stream_constraints={"audio": True, "video": False}),
+    audio_receiver_size=256,
+    async_processing=False,
+)
+
+if ctx and ctx.audio_receiver:
+    if "audio_processor" not in st.session_state:
+        st.session_state.audio_processor = AudioProcessor()
+
+    def collect_audio():
+        while True:
+            try:
+                frame = ctx.audio_receiver.get_frame(timeout=1)
+                st.session_state.audio_processor.recv(frame)
+                st.session_state.partial_transcript = st.session_state.audio_processor.partial_text
+            except queue.Empty:
+                break
+
+    t = threading.Thread(target=collect_audio)
+    t.start()
+
+    st.markdown("### 📝 Đang ghi âm...")
+    st.info(st.session_state.get("partial_transcript", "(Đang xử lý...)"))
+
+    if st.button("⏹ Dừng và xử lý ghi âm"):
+        audio_file_path = st.session_state.audio_processor.save_audio()
+        if audio_file_path:
+            with open(audio_file_path, "rb") as f:
+                transcript_text = transcribe_audio(f)
+                if transcript_text:
+                    st.subheader("📄 Văn bản từ ghi âm trực tiếp")
+                    st.write(transcript_text)
+                    corrected = correct_text(transcript_text)
+                    summary = summarize_text(corrected, subject)
+                    title = generate_title(corrected, subject)
+
+                    st.subheader("✍️ Tóm tắt")
+                    st.write(summary)
+
+                    if st.button("💾 Lưu ghi chú từ ghi âm"):
+                        c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)",
+                                  (st.session_state.username, title, subject, summary, corrected, datetime.now().isoformat()))
+                        conn.commit()
+                        st.success("✅ Đã lưu ghi chú từ ghi âm!")
 
 # ======================= MAIN UI =======================
-st.title("📝 NoteBot - Ghi chú từ ghi âm vào Notion")
+# Giao diện Streamlit
+st.set_page_config(page_title="NoteBot", layout="wide")
+st.title(" NoteBot")
 
-uploaded_file = st.file_uploader("📤 Tải lên file âm thanh (.mp3 hoặc .wav)", type=["mp3", "wav"])
-subject = st.text_input("📚 Môn học")
-notion_token = st.text_input("🔑 Notion Integration Token", type="password")
-database_id = st.text_input("🗂 Database ID")
+# Hướng dẫn sử dụng
+with st.expander("❓ Hướng dẫn sử dụng"):
+    st.markdown("""
+    ### 📘 Hướng dẫn sử dụng NoteBot
 
-if uploaded_file and subject and notion_token and database_id:
-    transcript_text = transcribe_audio(uploaded_file)
+    #### Bước chuẩn bị:
+    1. Truy cập [https://www.notion.com/my-integrations](https://www.notion.com/my-integrations) để tạo Notion Integration Token
+    2. Lấy Notion Token (bắt đầu bằng secret_...)
+    3. Tạo một database trong Notion với các cột sau: `Title` (kiểu Title), `Subject` (Rich text), `Summary` (Rich text), `Date` (Date)
+    4. Trong Integration mới tạo, chọn mục Access -> Edit access -> Chọn Teamspaces -> Chọn Workspace của bạn -> Chọn Database vừa mới tạo
+    5. Lấy Database ID trong link của Database vừa tạo (Bắt đầu từ sau dấu "/" đến dấu "?" hoặc đến hết)
 
-    if transcript_text:
-        st.subheader("📄 Văn bản trích xuất từ ghi âm")
-        st.write(transcript_text)
+    #### Cách sử dụng ứng dụng:
+    1. Nhập Notion Token và Database ID vào thanh bên trái → Nhấn "Lưu thông tin"
+    2. Chọn môn học phù hợp
+    3. Tải lên file ghi âm định dạng `.mp3` hoặc `.wav`
+    4. Nhấn "Tạo ghi chú và lưu vào Notion"
 
-        corrected = correct_text(transcript_text)
-        summary = summarize_text(corrected, subject)
-        title = generate_title(corrected, subject)
+    #### Ứng dụng sẽ tự động:
+    - Chuyển âm thanh thành văn bản
+    - Sửa lỗi chính tả và cải thiện chất lượng văn bản
+    - Tóm tắt theo cấu trúc từng môn học
+    - Tạo tiêu đề ngắn gọn phản ánh nội dung chính
+    - Lưu toàn bộ ghi chú vào tài khoản Notion của bạn
 
-        st.subheader("✍️ Tóm tắt bài giảng")
-        st.write(summary)
+    """)
 
-        # Giao diện chat
-        run_chatbox(corrected)
+# Nhập token và database
+with st.sidebar:
+    st.image("https://raw.githubusercontent.com/TrNghia16509/NoteBot/main/logo%20Notebot.jpg", width=150)
 
-        if st.button("💾 Lưu vào Notion"):
-            try:
-                notion = Client(auth=notion_token)
-                now = datetime.now().isoformat()
-                notion.pages.create(
-                    parent={"database_id": database_id},
-                    properties={
-                        "Title": {"title": [{"text": {"content": title}}]},
-                        "Subject": {"rich_text": [{"text": {"content": subject}}]},
-                        "Summary": {"rich_text": [{"text": {"content": summary or 'Không có tóm tắt'}}]},
-                        "Date": {"date": {"start": now}},
-                    },
-                    children=[
-                        {
-                            "object": "block",
-                            "type": "paragraph",
-                            "paragraph": {"rich_text": [{"text": {"content": corrected[:2000]}}]},
-                        }
-                    ]
-                )
-                st.success("✅ Đã lưu vào Notion!")
-            except Exception as e:
-                st.error(f"❌ Lỗi khi lưu vào Notion: {e}")
+# Điều kiện để tiếp tục
+if "notion_token" in st.session_state and "notion_db_id" in st.session_state:
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        subject = st.selectbox("Chọn môn học", ["Toán học", "Vật lý", "Hóa học", "Sinh học", "Văn học", "Lịch sử", "Địa lý", "Khác"])
+        audio_file = st.file_uploader("📤 Tải lên file âm thanh (.mp3 hoặc .wav)", type=["mp3", "wav"])
+
+
+        if audio_file and st.button("Tạo ghi chú"):
+
+            with st.spinner("Chuyển đổi âm thanh..."):
+                text = transcribe_audio(audio_file)
+                
+
+            if text:
+                st.subheader("📄 Văn bản trích xuất")
+                st.write(transcript_text)
+
+                corrected = correct_text(transcript_text)
+                summary = summarize_text(corrected, subject)
+                title = generate_title(corrected, subject)
+
+                st.subheader("✍️ Tóm tắt")
+                st.write(summary)
+
+                if st.button("💾 Lưu ghi chú"):
+                    c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)",
+                        (st.session_state.username, title, subject, summary, corrected, datetime.now().isoformat()))
+                    conn.commit()
+                    st.success("✅ Đã lưu ghi chú!")
+
+
+
+    with col2:
+        st.subheader("📚 Ghi chú đã lưu")
+        notes = c.execute("SELECT title, subject, summary, timestamp FROM notes WHERE username=? ORDER BY timestamp DESC", (st.session_state.username,)).fetchall()
+        if notes:
+            for note in notes:
+                with st.expander(f"📝 {note[0]} ({note[1]}) - {note[3][:10]}"):
+                    st.write(note[2])
+        else:
+            st.info("Chưa có ghi chú nào được lưu.")
 else:
-    st.info("📥 Vui lòng tải file âm thanh và điền đầy đủ thông tin để bắt đầu.")
+    st.warning("⚠️ Vui lòng đăng nhập để sử dụng ứng dụng.")
