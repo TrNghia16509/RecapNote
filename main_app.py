@@ -1,3 +1,4 @@
+
 import streamlit as st
 import os
 import sqlite3
@@ -5,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from faster_whisper import WhisperModel
 from pydub import AudioSegment
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import tempfile
 import wave
 import numpy as np
@@ -15,6 +16,36 @@ import google.generativeai as genai
 import fitz  # PyMuPDF
 import docx
 from io import BytesIO
+from flask import Flask, request, jsonify
+
+#================================ Ghi âm (backend) =========================
+flask_app = Flask(__name__)
+
+def process_audio_backend(filepath):
+    model = WhisperModel("small", compute_type="int8")
+    segments, info = model.transcribe(filepath, language="vi")
+    full_text = "\n".join([seg.text for seg in segments])
+    subject = genai.GenerativeModel("gemini-1.5-flash").generate_content("Chủ đề chính là gì?\n" + full_text).text.strip()
+    summary = genai.GenerativeModel("gemini-1.5-flash").generate_content("Tóm tắt:\n" + full_text).text.strip()
+    return subject, summary, full_text
+
+@flask_app.route("/upload_audio", methods=["POST"])
+def upload_audio():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files["file"]
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        file.save(tmp.name)
+        subject, summary, full_text = process_audio_backend(tmp.name)
+        return jsonify({
+            "subject": subject,
+            "summary": summary,
+            "text": full_text
+        })
+
+import threading
+threading.Thread(target=lambda: flask_app.run(port=8000), daemon=True).start()
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -101,6 +132,55 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 
 # ========= Chọn ngôn ngữ =========
 lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
+
+#=========== Ghi âm (frontend) ===========
+st.markdown("""
+### 🎙 Ghi âm trực tiếp bằng trình duyệt
+
+<button onclick="startRecording()">🎙 Bắt đầu ghi âm</button>
+<button onclick="stopRecording()">⏹ Dừng và gửi</button>
+<audio id="audioPlayback" controls></audio>
+
+<script>
+let mediaRecorder;
+let audioChunks = [];
+
+function startRecording() {
+    audioChunks = [];
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+
+        mediaRecorder.addEventListener("dataavailable", event => {
+            audioChunks.push(event.data);
+        });
+
+        mediaRecorder.addEventListener("stop", () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            document.getElementById("audioPlayback").src = audioUrl;
+
+            const formData = new FormData();
+            formData.append("file", audioBlob, "recorded.wav");
+
+            fetch("/upload_audio", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
+            })
+            .catch(error => alert("❌ Lỗi gửi ghi âm: " + error));
+        });
+    });
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+}
+</script>
+""", unsafe_allow_html=True)
 
 # ========= Tải file hoặc ghi âm =========
 uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
