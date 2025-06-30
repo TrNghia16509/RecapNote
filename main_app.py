@@ -163,7 +163,7 @@ function startRecording() {
             const formData = new FormData();
             formData.append("file", audioBlob, "recorded.wav");
 
-            fetch("/upload_audio", {
+            fetch("https://recapnote.onrender.com/upload_audio", {
                 method: "POST",
                 body: formData
             })
