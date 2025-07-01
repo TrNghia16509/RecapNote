@@ -1,4 +1,3 @@
-
 import streamlit as st
 import os
 import sqlite3
@@ -17,6 +16,9 @@ import fitz  # PyMuPDF
 import docx
 from io import BytesIO
 from flask import Flask, request, jsonify
+import secrets
+import smtplib
+from email.mime.text import MIMEText
 
 #================================ Ghi âm (backend) =========================
 flask_app = Flask(__name__)
@@ -51,6 +53,65 @@ threading.Thread(target=lambda: flask_app.run(port=8000), daemon=True).start()
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+RESET_URL = os.getenv("RESET_URL")
+RESET_TOKEN_PATH = "reset_tokens"
+os.makedirs(RESET_TOKEN_PATH, exist_ok=True)
+#==================== Đặt lại mật khẩu ============================
+query_params = st.experimental_get_query_params()
+token = query_params.get("reset_token", [None])[0]
+if token:
+    try:
+        with open(f"{RESET_TOKEN_PATH}/{token}.txt", "r") as f:
+            username_token = f.read().strip()
+    except:
+        st.error("❌ Mã xác thực không hợp lệ hoặc đã hết hạn.")
+        st.stop()
+
+    st.title("🔒 Đặt lại mật khẩu mới")
+    new_pass = st.text_input("🔑 Mật khẩu mới", type="password")
+    confirm = st.text_input("🔁 Xác nhận mật khẩu", type="password")
+    if st.button("Cập nhật mật khẩu"):
+        if new_pass != confirm:
+            st.warning("⚠️ Mật khẩu không khớp.")
+        else:
+            c.execute("UPDATE users SET password=? WHERE username=?", (new_pass, username_token))
+            conn.commit()
+            os.remove(f"{RESET_TOKEN_PATH}/{token}.txt")
+            st.success("✅ Mật khẩu đã được cập nhật.")
+            st.stop()
+
+#================= Gửi reset email ====================
+def send_reset_email(email, username):
+    reset_token = secrets.token_urlsafe(24)
+    reset_link = f"{RESET_URL}/?reset_token={reset_token}"
+    with open(f"{RESET_TOKEN_PATH}/{reset_token}.txt", "w") as f:
+        f.write(username)
+
+    msg = MIMEText(f"""Xin chào {username},
+
+Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản RecapNote.
+
+👉 Nhấn vào đường dẫn sau để đổi mật khẩu:
+{reset_link}
+
+Nếu bạn không yêu cầu, vui lòng bỏ qua email này.
+
+Trân trọng,
+RecapNote""")
+
+    msg["Subject"] = "🔐 Khôi phục mật khẩu RecapNote"
+    msg["From"] = EMAIL_ADDRESS
+    msg["To"] = email
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            server.send_message(msg)
+        st.success("✅ Đã gửi email khôi phục. Kiểm tra hộp thư!")
+    except Exception as e:
+        st.error(f"❌ Gửi mail thất bại: {e}")
 
 # ========= Cơ sở dữ liệu =========
 conn = sqlite3.connect("notes.db", check_same_thread=False)
@@ -85,7 +146,13 @@ def login():
                 st.error("Sai tài khoản hoặc mật khẩu.")
 
         if st.button("Quên mật khẩu?"):
-            st.info("Vui lòng liên hệ admin để được cấp lại.")
+            email_reset = st.text_input("📧 Nhập email đã đăng ký")
+            if email_reset:
+                row = c.execute("SELECT username FROM users WHERE email=?", (email_reset,)).fetchone()
+                if row:
+                    send_reset_email(email_reset, row[0])
+                else:
+                    st.error("❌ Không tìm thấy email trong hệ thống.")
 
 def register():
     with st.sidebar:
