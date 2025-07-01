@@ -1,13 +1,10 @@
 streamlit
 flask
 faster-whisper
-pydub
 google-generativeai
 python-dotenv
-av
+pydub
 PyMuPDF
 python-docx
-torch
-torchaudio
 numpy
-ffmpeg-python
+email-validator
