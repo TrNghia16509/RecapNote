@@ -19,12 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY . .
 
-# Cấp quyền thực thi cho script start.sh
+# Ensure start.sh is executable
 RUN chmod +x start.sh
 
-# Set environment variable
-ENV PYTHONUNBUFFERED=1
-ENV PORT=10000
+# Expose Streamlit port
+EXPOSE 10000
 
-# Chạy file start.sh
+# Default start command
 CMD ["./start.sh"]
