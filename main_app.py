@@ -58,7 +58,7 @@ RESET_URL = os.getenv("RESET_URL")
 RESET_TOKEN_PATH = "reset_tokens"
 os.makedirs(RESET_TOKEN_PATH, exist_ok=True)
 #==================== Đặt lại mật khẩu ============================
-query_params = st.query_params()
+query_params = st.query_params
 token = query_params.get("reset_token", [None])[0]
 if token:
     try:
