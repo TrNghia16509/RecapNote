@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 from dotenv import load_dotenv
 from faster_whisper import WhisperModel
-from pydub import AudioSegmen
+from pydub import AudioSegment
 import tempfile
 import wave
 import numpy as np
