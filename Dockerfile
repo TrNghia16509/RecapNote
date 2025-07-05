@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # ✅ Gán quyền thực thi sau khi đã copy
-RUN chmod +x start.sh
+RUN chmod +x ./start.sh
 
 EXPOSE 10000
 
