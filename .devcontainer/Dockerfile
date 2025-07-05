@@ -20,4 +20,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8501
 
 # Run the app
-CMD ["./start.sh"]
+CMD ["start.sh"]
