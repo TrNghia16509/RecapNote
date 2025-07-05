@@ -26,4 +26,4 @@ RUN chmod +x start.sh
 EXPOSE 10000
 
 # Default start command
-CMD ["./start.sh"]
+CMD ["start.sh"]
