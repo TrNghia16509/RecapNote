@@ -1,23 +1,30 @@
-# Base image: Python + system dependencies
+# Base image
 FROM python:3.10-slim
-
-# Install OS dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsndfile1 \
-    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy files
-COPY . /app
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements before code (cache install)
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose default Streamlit port
-EXPOSE 8501
+# Copy application files
+COPY . .
 
-# Run the app
-CMD ["start.sh"]
+# Cấp quyền thực thi cho script start.sh
+RUN chmod +x start.sh
+
+# Set environment variable
+ENV PYTHONUNBUFFERED=1
+ENV PORT=10000
+
+# Chạy file start.sh
+CMD ["./start.sh"]
