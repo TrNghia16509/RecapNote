@@ -4,8 +4,7 @@ import sqlite3
 from datetime import datetime
 from dotenv import load_dotenv
 from faster_whisper import WhisperModel
-from pydub import AudioSegment
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
+from pydub import AudioSegmen
 import tempfile
 import wave
 import numpy as np
