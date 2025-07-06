@@ -14,39 +14,9 @@ import google.generativeai as genai
 import fitz  # PyMuPDF
 import docx
 from io import BytesIO
-from flask import Flask, request, jsonify
 import secrets
 import smtplib
 from email.mime.text import MIMEText
-
-#================================ Ghi âm (backend) =========================
-flask_app = Flask(__name__)
-
-def process_audio_backend(filepath):
-    model = WhisperModel("small", compute_type="int8")
-    segments, info = model.transcribe(filepath, language="vi")
-    full_text = "\n".join([seg.text for seg in segments])
-    subject = genai.GenerativeModel("gemini-1.5-flash").generate_content("Chủ đề chính là gì?\n" + full_text).text.strip()
-    summary = genai.GenerativeModel("gemini-1.5-flash").generate_content("Tóm tắt:\n" + full_text).text.strip()
-    return subject, summary, full_text
-
-@flask_app.route("/upload_audio", methods=["POST"])
-def upload_audio():
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    file = request.files["file"]
-    import tempfile
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        file.save(tmp.name)
-        subject, summary, full_text = process_audio_backend(tmp.name)
-        return jsonify({
-            "subject": subject,
-            "summary": summary,
-            "text": full_text
-        })
-
-import threading
-threading.Thread(target=lambda: flask_app.run(port=8000), daemon=True).start()
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -229,7 +199,7 @@ function startRecording() {
             const formData = new FormData();
             formData.append("file", audioBlob, "recorded.wav");
 
-            fetch("https://recapnote.onrender.com/upload_audio", {
+            fetch("https://flask-recapnote.onrender.com/upload_audio", {
                 method: "POST",
                 body: formData
             })
