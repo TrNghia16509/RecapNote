@@ -122,12 +122,12 @@ c.execute('''CREATE TABLE IF NOT EXISTS notes (
 conn.commit()
 
 # ========= Tiêu đề và logo =========
-st.set_page_config(page_title="NoteBot", layout="wide")
+st.set_page_config(page_title="RecapNote", layout="wide")
 col1, col2 = st.columns([1, 5])
 with col1:
-    st.image("https://raw.githubusercontent.com/TrNghia16509/NoteBot/main/logo%20Notebot.jpg", width=150)
+    st.image("https://raw.githubusercontent.com/TrNghia16509/NoteBot/main/logo.png", width=150)
 with col2:
-    st.title("NoteBot - Ghi chú thông minh từ nội dung đa phương tiện")
+    st.title("RecapNote - Ứng dụng AI ghi nhớ và tóm tắt văn bản")
 
 # ========= Sidebar: Đăng nhập / Đăng ký =========
 def login():
