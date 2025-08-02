@@ -303,11 +303,9 @@ if st.session_state.logged_in:
             st.markdown(f"**Tóm tắt:** {r[1]}")
             st.markdown(f"**Ghi chú:** {r[3]}")
 # ============ Chạy ==================
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8501))
-    streamlit.web.bootstrap.run(
-        "main_app.py",
-        "",
-        [],
-        {"server.port": port, "server.enableCORS": False}
-    )
+streamlit.web.bootstrap.run(
+    "main_app.py",  # <-- thay bằng tên file thật
+    "",
+    [],
+    flag_options={"server.port": port, "server.address": "0.0.0.0"},
+)
