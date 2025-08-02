@@ -200,7 +200,7 @@ function startRecording() {
             const formData = new FormData();
             formData.append("file", audioBlob, "recorded.wav");
 
-            fetch("https://flask-recapnote.up.railway.app/upload_audio", {
+            fetch("https://flask-recapnote.onrender.com/upload_audio", {
                 method: "POST",
                 body: formData
             })
