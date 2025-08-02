@@ -17,6 +17,7 @@ from io import BytesIO
 import secrets
 import smtplib
 from email.mime.text import MIMEText
+import streamlit.web.bootstrap
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -301,3 +302,12 @@ if st.session_state.logged_in:
 
             st.markdown(f"**Tóm tắt:** {r[1]}")
             st.markdown(f"**Ghi chú:** {r[3]}")
+# ============ Chạy ==================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8501))
+    streamlit.web.bootstrap.run(
+        "main_app.py",
+        "",
+        [],
+        {"server.port": port, "server.enableCORS": False}
+    )
