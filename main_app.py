@@ -18,7 +18,6 @@ import secrets
 import smtplib
 from email.mime.text import MIMEText
 import streamlit.web.bootstrap
-import sys
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -306,9 +305,3 @@ if st.session_state.logged_in:
 # ============ Chạy ==================
 port = int(os.environ.get("PORT", 8501))
 
-st.set_page_config(page_title="My App")
-
-if __name__ == "__main__":
-    import streamlit.web.cli as stcli
-    sys.argv = ["streamlit", "run", "main_app.py", "--server.port", str(port), "--server.address", "0.0.0.0"]
-    sys.exit(stcli.main())
