@@ -308,5 +308,6 @@ port = int(os.environ.get("PORT", 8501))
 st.set_page_config(page_title="My App")
 
 if __name__ == "__main__":
-    import subprocess
-    subprocess.run(["streamlit", "run", "main_app.py", "--server.port", port, "--server.address", "0.0.0.0"])
+    import streamlit.web.cli as stcli
+    sys.argv = ["streamlit", "run", "main_app.py", "--server.port", str(port), "--server.address", "0.0.0.0"]
+    sys.exit(stcli.main())
