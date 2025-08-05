@@ -10,3 +10,4 @@ numpy
 email-validator
 gunicorn
 requests
+authlib
