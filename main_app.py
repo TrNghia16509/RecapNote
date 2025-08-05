@@ -105,12 +105,12 @@ with col2:
 # ========= Sidebar: Đăng nhập / Đăng ký =========
 def login():
     with st.sidebar:
-    st.markdown("---")
-    st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
+        st.markdown("---")
+        st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
 
-    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
-    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-    redirect_uri = "https://recapnote.up.railway.app"  # Replace with your actual deployed frontend URL
+        google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+        google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        redirect_uri = "https://recapnote.up.railway.app"  # Replace with your actual deployed frontend URL
 
     if st.button("🔐 Đăng nhập với Google"):
         oauth = OAuth2Session(
@@ -168,12 +168,12 @@ def login():
 
 def register():
     with st.sidebar:
-    st.markdown("---")
-    st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
+        st.markdown("---")
+        st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
 
-    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
-    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-    redirect_uri = "https://YOUR-RAILWAY-URL"  # Replace with your actual deployed frontend URL
+        google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+        google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        redirect_uri = "https://recapnote.up.railway.app"  # Replace with your actual deployed frontend URL
 
     if st.button("🔐 Đăng nhập với Google"):
         oauth = OAuth2Session(
