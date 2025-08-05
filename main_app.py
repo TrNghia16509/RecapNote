@@ -18,6 +18,8 @@ import secrets
 import smtplib
 from email.mime.text import MIMEText
 import streamlit.web.bootstrap
+from authlib.integrations.requests_client import OAuth2Session
+import requests
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -103,6 +105,46 @@ with col2:
 # ========= Sidebar: Đăng nhập / Đăng ký =========
 def login():
     with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
+
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    redirect_uri = "https://recapnote.up.railway.app"  # Replace with your actual deployed frontend URL
+
+    if st.button("🔐 Đăng nhập với Google"):
+        oauth = OAuth2Session(
+            client_id=google_client_id,
+            client_secret=google_client_secret,
+            scope="openid email profile",
+            redirect_uri=redirect_uri,
+        )
+        authorization_url, state = oauth.create_authorization_url(
+            "https://accounts.google.com/o/oauth2/v2/auth"
+        )
+        st.session_state.oauth_state = state
+        st.markdown(f"[Bấm vào đây để đăng nhập]({authorization_url})")
+
+    query_params = st.query_params
+    code = query_params.get("code", [None])[0]
+    if code:
+        try:
+            oauth = OAuth2Session(
+                client_id=google_client_id,
+                client_secret=google_client_secret,
+                redirect_uri=redirect_uri,
+            )
+            token = oauth.fetch_token(
+                "https://oauth2.googleapis.com/token",
+                code=code,
+            )
+            user_info = oauth.get("https://openidconnect.googleapis.com/v1/userinfo").json()
+            st.session_state.logged_in = True
+            st.session_state.username = user_info["email"]
+            st.success(f"✅ Xin chào {user_info['name']}")
+        except Exception as e:
+            st.error(f"❌ Đăng nhập Google thất bại: {e}")
+
         st.subheader("🔐 Đăng nhập")
         u = st.text_input("Tên đăng nhập hoặc email")
         p = st.text_input("Mật khẩu", type="password")
@@ -126,6 +168,46 @@ def login():
 
 def register():
     with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
+
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    redirect_uri = "https://YOUR-RAILWAY-URL"  # Replace with your actual deployed frontend URL
+
+    if st.button("🔐 Đăng nhập với Google"):
+        oauth = OAuth2Session(
+            client_id=google_client_id,
+            client_secret=google_client_secret,
+            scope="openid email profile",
+            redirect_uri=redirect_uri,
+        )
+        authorization_url, state = oauth.create_authorization_url(
+            "https://accounts.google.com/o/oauth2/v2/auth"
+        )
+        st.session_state.oauth_state = state
+        st.markdown(f"[Bấm vào đây để đăng nhập]({authorization_url})")
+
+    query_params = st.query_params
+    code = query_params.get("code", [None])[0]
+    if code:
+        try:
+            oauth = OAuth2Session(
+                client_id=google_client_id,
+                client_secret=google_client_secret,
+                redirect_uri=redirect_uri,
+            )
+            token = oauth.fetch_token(
+                "https://oauth2.googleapis.com/token",
+                code=code,
+            )
+            user_info = oauth.get("https://openidconnect.googleapis.com/v1/userinfo").json()
+            st.session_state.logged_in = True
+            st.session_state.username = user_info["email"]
+            st.success(f"✅ Xin chào {user_info['name']}")
+        except Exception as e:
+            st.error(f"❌ Đăng nhập Google thất bại: {e}")
+
         st.subheader("🆕 Đăng ký")
         new_user = st.text_input("Tên đăng nhập mới")
         email = st.text_input("Email")
@@ -143,13 +225,52 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 🔓 Hoặc đăng nhập bằng Google")
+
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    redirect_uri = "https://YOUR-RAILWAY-URL"  # Replace with your actual deployed frontend URL
+
+    if st.button("🔐 Đăng nhập với Google"):
+        oauth = OAuth2Session(
+            client_id=google_client_id,
+            client_secret=google_client_secret,
+            scope="openid email profile",
+            redirect_uri=redirect_uri,
+        )
+        authorization_url, state = oauth.create_authorization_url(
+            "https://accounts.google.com/o/oauth2/v2/auth"
+        )
+        st.session_state.oauth_state = state
+        st.markdown(f"[Bấm vào đây để đăng nhập]({authorization_url})")
+
+    query_params = st.query_params
+    code = query_params.get("code", [None])[0]
+    if code:
+        try:
+            oauth = OAuth2Session(
+                client_id=google_client_id,
+                client_secret=google_client_secret,
+                redirect_uri=redirect_uri,
+            )
+            token = oauth.fetch_token(
+                "https://oauth2.googleapis.com/token",
+                code=code,
+            )
+            user_info = oauth.get("https://openidconnect.googleapis.com/v1/userinfo").json()
+            st.session_state.logged_in = True
+            st.session_state.username = user_info["email"]
+            st.success(f"✅ Xin chào {user_info['name']}")
+        except Exception as e:
+            st.error(f"❌ Đăng nhập Google thất bại: {e}")
+
     st.markdown("## 🔑 Tài khoản")
     menu = st.radio("Chọn chức năng", ["Đăng nhập", "Đăng ký"])
     if menu == "Đăng nhập":
         login()
     else:
         register()
-
 # ========= Hướng dẫn sử dụng =========
 with st.expander("📘 Hướng dẫn sử dụng"):
     st.markdown("""
