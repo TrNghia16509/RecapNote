@@ -30,9 +30,6 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 RESET_URL = os.getenv("RESET_URL")
 RESET_TOKEN_PATH = "reset_tokens"
 os.makedirs(RESET_TOKEN_PATH, exist_ok=True)
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = "https://recapnote.up.railway.app/"
 #================ Khởi tạo session_state ================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -130,7 +127,7 @@ def login():
         if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
             client_id = os.getenv("GOOGLE_CLIENT_ID")
             client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-            redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+            redirect_uri = "https://recapnote.up.railway.app/"
 
             oauth = OAuth2Session(
                 client_id,
