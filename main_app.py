@@ -52,6 +52,13 @@ if "recorded_file_path" not in st.session_state:
 
 if "start_time" not in st.session_state:
     st.session_state.start_time = 0
+
+if "temp_wav_file" not in st.session_state:
+    st.session_state.temp_wav_file = None
+    
+if "summary_result" not in st.session_state:
+    st.session_state.summary_result = None
+    
 #==================== Đặt lại mật khẩu ============================
 query_params = st.query_params
 token = query_params.get("reset_token", [None])[0]
