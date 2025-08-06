@@ -197,7 +197,7 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
 
 #=========== Ghi âm (frontend) ===========
-st.markdown("""
+st.markdown(f"""
 ### 🎙 Ghi âm trực tiếp bằng trình duyệt
 
 <button onclick="startRecording()">🎙 Bắt đầu ghi âm</button>
@@ -208,40 +208,56 @@ st.markdown("""
 let mediaRecorder;
 let audioChunks = [];
 
-function startRecording() {
+async function startRecording() {{
     audioChunks = [];
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    try {{
+        const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
         mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
 
-        mediaRecorder.addEventListener("dataavailable", event => {
-            audioChunks.push(event.data);
-        });
+        mediaRecorder.ondataavailable = (event) => {{
+            if (event.data.size > 0) {{
+                audioChunks.push(event.data);
+            }}
+        }};
 
-        mediaRecorder.addEventListener("stop", () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        mediaRecorder.onstop = async () => {{
+            const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
             const audioUrl = URL.createObjectURL(audioBlob);
             document.getElementById("audioPlayback").src = audioUrl;
 
             const formData = new FormData();
             formData.append("file", audioBlob, "recorded.wav");
 
-            fetch("https://flask-recapnote.onrender.com/upload_audio", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-            })
-            .catch(error => alert("❌ Lỗi gửi ghi âm: " + error));
-        });
-    });
-}
+            try {{
+                const response = await fetch("https://flask-recapnote.onrender.com/upload_audio", {{
+                    method: "POST",
+                    body: formData
+                }});
 
-function stopRecording() {
-    mediaRecorder.stop();
-}
+                if (!response.ok) {{
+                    const text = await response.text();
+                    throw new Error("Lỗi HTTP " + response.status + ": " + text);
+                }}
+
+                const data = await response.json();
+                alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
+
+            }} catch (error) {{
+                alert("❌ Gửi ghi âm thất bại: " + error);
+            }}
+        }};
+
+        mediaRecorder.start();
+    }} catch (err) {{
+        alert("❌ Trình duyệt không cho phép truy cập microphone: " + err);
+    }}
+}}
+
+function stopRecording() {{
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {{
+        mediaRecorder.stop();
+    }}
+}}
 </script>
 """, unsafe_allow_html=True)
 
