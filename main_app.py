@@ -222,6 +222,16 @@ lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", 
 #=========== Ghi âm (frontend) ===========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
+def audio_frame_callback(frame: av.AudioFrame):
+    audio = frame.to_ndarray()
+    sample_rate = frame.sample_rate
+
+    # Lưu file tạm vào buffer
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+    sf.write(temp_file.name, audio.T, sample_rate)  # audio.T để chuyển từ shape (channels, samples)
+    
+    st.session_state.temp_wav_file = temp_file.name
+
 record_button = st.button(
     "⏺ Bắt đầu ghi âm" if not st.session_state.is_recording else "⏹ Dừng ghi âm"
 )
