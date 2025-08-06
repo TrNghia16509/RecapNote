@@ -33,6 +33,12 @@ os.makedirs(RESET_TOKEN_PATH, exist_ok=True)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = "https://recapnote.up.railway.app/"
+#================ Khởi tạo session_state ================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "profile" not in st.session_state:
+    st.session_state.profile = None
 #==================== Đặt lại mật khẩu ============================
 query_params = st.query_params
 token = query_params.get("reset_token", [None])[0]
@@ -105,47 +111,74 @@ with col1:
 with col2:
     st.title("RecapNote - Ứng dụng AI ghi nhớ và tóm tắt văn bản")
 
-# ========= Sidebar: Đăng nhập / Đăng ký =========
-# Giao diện sidebar
-def login_sidebar():
-    st.sidebar.markdown("## 🔐 Đăng nhập / Đăng ký")
-    
-    if "profile" not in st.session_state:
-        if st.sidebar.button("🔓 Đăng nhập với Google", key="login_google"):
-            oauth = create_oauth_session()
-            uri, _ = oauth.create_authorization_url("https://accounts.google.com/o/oauth2/auth")
-            st.session_state["auth_url"] = uri
-            st.experimental_rerun()
+# ========= Sidebar: Đăng nhập / Đăng ký ========= 
+def login():
+    with st.sidebar:
+        st.subheader("🔐 Đăng nhập")
+        u = st.text_input("Tên đăng nhập hoặc email")
+        p = st.text_input("Mật khẩu", type="password")
+        if st.button("Đăng nhập", key="login_btn"):
+            row = c.execute("SELECT * FROM users WHERE (username=? OR email=?) AND password=?", (u, u, p)).fetchone()
+            if row:
+                st.session_state.logged_in = True
+                st.session_state.username = row[0]
+                st.success("✅ Đăng nhập thành công!")
+            else:
+                st.error("Sai tài khoản hoặc mật khẩu.")
 
-        # Kiểm tra nếu người dùng quay lại từ Google (URL chứa mã)
-        if "code" in st.query_params:
-            code = st.query_params["code"]
-            oauth = create_oauth_session()
-            token = oauth.fetch_token(
-                "https://oauth2.googleapis.com/token",
-                code=code,
-                authorization_response=st.experimental_get_query_params()
+        # Đăng nhập bằng Google
+        if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
+            client_id = os.getenv("GOOGLE_CLIENT_ID")
+            client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+            redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+
+            oauth = OAuth2Session(
+                client_id,
+                client_secret,
+                scope="openid email profile",
+                redirect_uri=redirect_uri
             )
-            userinfo = oauth.get("https://www.googleapis.com/oauth2/v3/userinfo").json()
+            uri, state = oauth.create_authorization_url("https://accounts.google.com/o/oauth2/auth")
+            st.markdown(f"[Nhấn vào đây để đăng nhập bằng Google]({uri})")
 
-            st.session_state["profile"] = {
-                "name": userinfo["name"],
-                "email": userinfo["email"],
-                "picture": userinfo["picture"]
-            }
-            st.experimental_rerun()
+        if st.button("Quên mật khẩu?", key="forgot_btn"):
+            email_reset = st.text_input("📧 Nhập email đã đăng ký")
+            if email_reset:
+                row = c.execute("SELECT username FROM users WHERE email=?", (email_reset,)).fetchone()
+                if row:
+                    send_reset_email(email_reset, row[0])
+                else:
+                    st.error("❌ Không tìm thấy email trong hệ thống.")
 
+def register():
+    with st.sidebar:
+        st.subheader("🆕 Đăng ký")
+        new_user = st.text_input("Tên đăng nhập mới")
+        email = st.text_input("Email")
+        pw1 = st.text_input("Mật khẩu", type="password")
+        pw2 = st.text_input("Xác nhận mật khẩu", type="password")
+        if st.button("Đăng ký", key="register_btn"):
+            if pw1 != pw2:
+                st.warning("❌ Mật khẩu không khớp.")
+            else:
+                c.execute("INSERT INTO users VALUES (?, ?, ?)", (new_user, pw1, email))
+                conn.commit()
+                st.success("✅ Đăng ký thành công. Hãy đăng nhập.")
+
+with st.sidebar:
+    st.markdown("## 🔑 Tài khoản")
+    menu = st.radio("Chọn chức năng", ["Đăng nhập", "Đăng ký"])
+    if menu == "Đăng nhập":
+        login()
     else:
-        profile = st.session_state["profile"]
-        st.sidebar.image(profile["picture"], width=50)
-        st.sidebar.write(f"👤 {profile['name']}")
-        st.sidebar.write(f"📧 {profile['email']}")
+        register()
 
-        if st.sidebar.button("🚪 Đăng xuất", key="logout"):
-            st.session_state.clear()
-            st.experimental_rerun()
-            
-login_sidebar()
+    if st.session_state.logged_in or st.session_state.profile:
+        if st.button("🚪 Đăng xuất", key="logout_btn"):
+            st.session_state.logged_in = False
+            st.session_state.profile = None
+            st.success("✅ Đã đăng xuất.")
+
 # ========= Hướng dẫn sử dụng =========
 with st.expander("📘 Hướng dẫn sử dụng"):
     st.markdown("""
