@@ -22,6 +22,7 @@ from authlib.integrations.requests_client import OAuth2Session
 import requests
 from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import av
+import time
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -199,60 +200,80 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
 
 #=========== Ghi âm (frontend) ===========
+# Biến ghi nhớ thời gian và âm thanh
+audio_buffer = st.session_state.get("audio_buffer", [])
+is_recording = st.session_state.get("is_recording", False)
+start_time = st.session_state.get("start_time", None)
+temp_wav_file = st.session_state.get("temp_wav_file", None)
 
-audio_buffer = queue.Queue()
-
-def audio_callback(frame: av.AudioFrame):
-    pcm = frame.to_ndarray().flatten()
-    audio_buffer.put(pcm)
+def audio_frame_callback(frame: av.AudioFrame):
+    pcm = frame.to_ndarray().flatten().astype(np.int16).tobytes()
+    st.session_state.audio_buffer.append(pcm)
     return frame
 
-st.markdown("### 🎙 Ghi âm với streamlit-webrtc")
+st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
-ctx = webrtc_streamer(
-    key="recorder",
-    mode=WebRtcMode.SENDONLY,
-    audio_receiver_size=1024,
-    media_stream_constraints={"audio": True, "video": False},
-    audio_frame_callback=audio_callback,
-)
+# Ghi lại
+if st.button("🔁 Ghi lại"):
+    st.session_state.audio_buffer = []
+    st.session_state.temp_wav_file = None
+    st.session_state.start_time = None
+    st.session_state.is_recording = False
+    st.experimental_rerun()
 
-# Ghi âm 5 giây rồi gửi về Flask
-if st.button("⏺ Ghi âm"):
-    st.info("⏳ Đang ghi âm trong 5 giây...")
-    frames = []
-    import time
+# Bắt đầu ghi âm
+if not is_recording and st.button("🎙 Bắt đầu ghi âm"):
+    st.session_state.audio_buffer = []
+    st.session_state.start_time = time.time()
+    st.session_state.is_recording = True
+    st.experimental_rerun()
 
-    start_time = time.time()
-    while time.time() - start_time < 5:
-        try:
-            frames.append(audio_buffer.get(timeout=1))
-        except queue.Empty:
-            break
+# Đang ghi
+if st.session_state.get("is_recording", False):
+    elapsed = int(time.time() - st.session_state.start_time)
+    st.success(f"🔴 Đang ghi âm... {elapsed} giây")
+    webrtc_streamer(
+        key="recorder",
+        mode=WebRtcMode.SENDONLY,
+        in_audio_enabled=True,
+        out_audio_enabled=False,
+        audio_frame_callback=audio_frame_callback,
+        media_stream_constraints={"audio": True, "video": False},
+    )
 
-    st.success("✅ Ghi âm xong!")
+# Dừng ghi
+if is_recording and st.button("⏹ Dừng ghi âm"):
+    st.session_state.is_recording = False
+    st.session_state.start_time = None
 
-    if frames:
-        import soundfile as sf
-        import tempfile
+    if st.session_state.audio_buffer:
+        temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+        with wave.open(temp_wav.name, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(48000)
+            wf.writeframes(b''.join(st.session_state.audio_buffer))
 
-        audio_data = np.concatenate(frames).astype(np.int16)
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-            sf.write(f.name, audio_data, samplerate=48000)
-            f.seek(0)
-            with open(f.name, "rb") as file:
-                files = {"file": ("recorded.wav", file, "audio/wav")}
-                try:
-                    r = requests.post("https://flask-recapnote.onrender.com/upload_audio", files=files)
-                    if r.status_code == 200:
-                        res = r.json()
-                        st.success(f"📌 Chủ đề: {res['subject']}")
-                        st.info(f"📝 Tóm tắt: {res['summary']}")
-                    else:
-                        st.error("❌ Lỗi phản hồi từ server Flask.")
-                except Exception as e:
-                    st.error(f"❌ Lỗi gửi ghi âm: {e}")
+        st.session_state.temp_wav_file = temp_wav.name
+        st.audio(temp_wav.name, format="audio/wav")
 
+# Nếu có file tạm, hiển thị nút gửi
+if st.session_state.get("temp_wav_file", None):
+    st.audio(st.session_state.temp_wav_file, format="audio/wav")
+
+    if st.button("📤 Gửi và chuyển sang văn bản"):
+        with open(st.session_state.temp_wav_file, 'rb') as f:
+            files = {'file': f}
+            try:
+                response = requests.post("https://flask-recapnote.onrender.com/upload_audio", files=files)
+                if response.status_code == 200:
+                    data = response.json()
+                    st.success(f"📌 Chủ đề: {data['subject']}\n\n📝 Tóm tắt: {data['summary']}")
+                else:
+                    st.error("❌ Lỗi khi gửi file: " + response.text)
+            except Exception as e:
+                st.error(f"❌ Gửi thất bại: {e}")
+                
 # ========= Tải file hoặc ghi âm =========
 uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
 
