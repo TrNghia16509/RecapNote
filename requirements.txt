@@ -12,3 +12,4 @@ gunicorn
 requests
 authlib
 streamlit-webrtc
+soundfile
