@@ -222,8 +222,10 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 # ========= Chọn ngôn ngữ =========
 lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
 
-#=========== Ghi âm (frontend) ===========
+# ========== Ghi âm (frontend) ==========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
+
+sample_rate = 16000
 
 # ==== Audio processing ====
 def audio_frame_callback(frame: AudioFrame):
@@ -254,8 +256,6 @@ def upload_audio(filepath):
     return response.json()
 
 # ==== Giao diện chính ====
-st.markdown("## 🎙 Ghi âm giọng nói")
-
 btn_label = "⏹ Dừng ghi âm" if st.session_state.recording else "🎙 Bắt đầu ghi âm"
 if st.button(btn_label):
     if not st.session_state.recording:
@@ -267,9 +267,14 @@ if st.button(btn_label):
         # Dừng ghi
         st.session_state.recording = False
         filepath = save_audio(st.session_state.audio_frames)
-        st.success("✅ Ghi âm xong!")
         if filepath:
-            # Hiển thị nút gửi
+            st.success("✅ Ghi âm xong!")
+
+            # Cho phép nghe lại
+            with open(filepath, "rb") as f:
+                st.audio(f.read(), format="audio/wav")
+
+            # Nút gửi về backend
             if st.button("📤 Gửi và chuyển văn bản"):
                 result = upload_audio(filepath)
                 st.success("📌 Chủ đề: " + result.get("subject", "Không rõ"))
@@ -279,22 +284,19 @@ if st.button(btn_label):
             with open(filepath, "rb") as f:
                 st.download_button("⬇️ Tải file ghi âm", f, file_name="recorded.wav")
 
-            # Dọn session
+            # Cho phép ghi lại
+            if st.button("🔄 Ghi lại"):
+                st.session_state.audio_frames = []
+                st.session_state.temp_wav_file = None
+                st.rerun()
+
+            # Xóa file temp nếu không cần
             os.remove(filepath)
             st.session_state.temp_wav_file = None
         else:
             st.warning("⚠️ Không có dữ liệu ghi âm để xử lý.")
-            
-        with open(filepath, "rb") as f:
-            st.audio(f.read(), format="audio/wav")
-            
-        # Cho phép ghi lại
-        if st.button("🔄 Ghi lại"):
-            st.session_state.audio_frames = []
-            st.session_state.temp_wav_file = None
-            st.rerun()
 
-# ==== Hiển thị thời gian ghi âm ====
+# ==== Hiển thị thời gian ghi âm + kích hoạt mic ====
 if st.session_state.recording:
     elapsed = int(time.time() - st.session_state.start_time)
     st.success(f"🔴 Đang ghi âm... {elapsed//60:02}:{elapsed%60:02} phút:giây")
@@ -304,7 +306,6 @@ if st.session_state.recording:
         audio_frame_callback=audio_frame_callback,
         media_stream_constraints={"audio": True, "video": False},
     )
-                
 # ========= Tải file hoặc ghi âm =========
 uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
 
