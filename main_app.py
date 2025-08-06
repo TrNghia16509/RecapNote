@@ -219,14 +219,14 @@ if st.button("🔁 Ghi lại"):
     st.session_state.temp_wav_file = None
     st.session_state.start_time = None
     st.session_state.is_recording = False
-    st.experimental_rerun()
+    st.rerun()
 
 # Bắt đầu ghi âm
 if not is_recording and st.button("🎙 Bắt đầu ghi âm"):
     st.session_state.audio_buffer = []
     st.session_state.start_time = time.time()
     st.session_state.is_recording = True
-    st.experimental_rerun()
+    st.rerun()
 
 # Đang ghi
 if st.session_state.get("is_recording", False):
