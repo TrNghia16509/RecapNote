@@ -41,8 +41,8 @@ if "profile" not in st.session_state:
     st.session_state.profile = None
 
 # Khởi tạo session state
-if "is_recording" not in st.session_state:
-    st.session_state.is_recording = False
+if "recording" not in st.session_state:
+    st.session_state.recording = False
 
 if "audio_buffer" not in st.session_state:
     st.session_state.audio_buffer = []
@@ -58,6 +58,9 @@ if "temp_wav_file" not in st.session_state:
     
 if "summary_result" not in st.session_state:
     st.session_state.summary_result = None
+
+if "audio_frames" not in st.session_state:
+    st.session_state.audio_frames = []
     
 #==================== Đặt lại mật khẩu ============================
 query_params = st.query_params
