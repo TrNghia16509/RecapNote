@@ -197,67 +197,68 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
 
 #=========== Ghi âm (frontend) ===========
-st.markdown(f"""
+st.markdown("""
 ### 🎙 Ghi âm trực tiếp bằng trình duyệt
 
-<button onclick="startRecording()">🎙 Bắt đầu ghi âm</button>
-<button onclick="stopRecording()">⏹ Dừng và gửi</button>
+<button type="button" id="recordBtn">🎙 Bắt đầu ghi âm</button>
+<button type="button" id="stopBtn">⏹ Dừng và gửi</button>
 <audio id="audioPlayback" controls></audio>
 
 <script>
 let mediaRecorder;
 let audioChunks = [];
 
-async function startRecording() {{
+document.addEventListener("DOMContentLoaded", function() {
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    if (recordBtn && stopBtn) {
+        recordBtn.addEventListener("click", startRecording);
+        stopBtn.addEventListener("click", stopRecording);
+    }
+});
+
+function startRecording() {
     audioChunks = [];
-    try {{
-        const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
-        mediaRecorder = new MediaRecorder(stream);
 
-        mediaRecorder.ondataavailable = (event) => {{
-            if (event.data.size > 0) {{
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+
+            mediaRecorder.addEventListener("dataavailable", event => {
                 audioChunks.push(event.data);
-            }}
-        }};
+            });
 
-        mediaRecorder.onstop = async () => {{
-            const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
-            const audioUrl = URL.createObjectURL(audioBlob);
-            document.getElementById("audioPlayback").src = audioUrl;
+            mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                document.getElementById("audioPlayback").src = audioUrl;
 
-            const formData = new FormData();
-            formData.append("file", audioBlob, "recorded.wav");
+                const formData = new FormData();
+                formData.append("file", audioBlob, "recorded.wav");
 
-            try {{
-                const response = await fetch("https://flask-recapnote.onrender.com/upload_audio", {{
+                fetch("https://flask-recapnote.onrender.com/upload_audio", {
                     method: "POST",
                     body: formData
-                }});
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
+                })
+                .catch(error => alert("❌ Lỗi gửi ghi âm: " + error));
+            });
+        })
+        .catch(error => {
+            alert("⚠️ Không thể truy cập micro: " + error);
+        });
+}
 
-                if (!response.ok) {{
-                    const text = await response.text();
-                    throw new Error("Lỗi HTTP " + response.status + ": " + text);
-                }}
-
-                const data = await response.json();
-                alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-
-            }} catch (error) {{
-                alert("❌ Gửi ghi âm thất bại: " + error);
-            }}
-        }};
-
-        mediaRecorder.start();
-    }} catch (err) {{
-        alert("❌ Trình duyệt không cho phép truy cập microphone: " + err);
-    }}
-}}
-
-function stopRecording() {{
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {{
+function stopRecording() {
+    if (mediaRecorder) {
         mediaRecorder.stop();
-    }}
-}}
+    }
+}
 </script>
 """, unsafe_allow_html=True)
 
