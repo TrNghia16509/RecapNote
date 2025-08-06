@@ -21,7 +21,7 @@ import streamlit.web.bootstrap
 from authlib.integrations.requests_client import OAuth2Session
 import requests
 from streamlit_webrtc import webrtc_streamer, WebRtcMode
-import av
+from av import AudioFrame
 import time
 
 # ========= Cấu hình =========
