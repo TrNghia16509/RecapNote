@@ -39,6 +39,19 @@ if "logged_in" not in st.session_state:
 
 if "profile" not in st.session_state:
     st.session_state.profile = None
+
+# Khởi tạo session state
+if "is_recording" not in st.session_state:
+    st.session_state.is_recording = False
+
+if "audio_buffer" not in st.session_state:
+    st.session_state.audio_buffer = []
+
+if "recorded_file_path" not in st.session_state:
+    st.session_state.recorded_file_path = None
+
+if "start_time" not in st.session_state:
+    st.session_state.start_time = 0
 #==================== Đặt lại mật khẩu ============================
 query_params = st.query_params
 token = query_params.get("reset_token", [None])[0]
@@ -200,69 +213,60 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
 
 #=========== Ghi âm (frontend) ===========
-# Biến ghi nhớ thời gian và âm thanh
-audio_buffer = st.session_state.get("audio_buffer", [])
-is_recording = st.session_state.get("is_recording", False)
-start_time = st.session_state.get("start_time", None)
-temp_wav_file = st.session_state.get("temp_wav_file", None)
-
-def audio_frame_callback(frame: av.AudioFrame):
-    pcm = frame.to_ndarray().flatten().astype(np.int16).tobytes()
-    st.session_state.audio_buffer.append(pcm)
-    return frame
-
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
-# Ghi lại
-if st.button("🔁 Ghi lại"):
-    st.session_state.audio_buffer = []
-    st.session_state.temp_wav_file = None
-    st.session_state.start_time = None
-    st.session_state.is_recording = False
-    st.rerun()
+record_button = st.button(
+    "⏺ Bắt đầu ghi âm" if not st.session_state.is_recording else "⏹ Dừng ghi âm"
+)
 
-# Bắt đầu ghi âm
-if not is_recording and st.button("🎙 Bắt đầu ghi âm"):
-    st.session_state.audio_buffer = []
-    st.session_state.start_time = time.time()
-    st.session_state.is_recording = True
-    st.rerun()
+if record_button:
+    if not st.session_state.is_recording:
+        st.session_state.audio_buffer = []
+        st.session_state.start_time = time.time()
+        st.session_state.is_recording = True
+    else:
+        st.session_state.is_recording = False
+        st.session_state.start_time = None
 
-# Đang ghi
-if st.session_state.get("is_recording", False):
+        # Lưu file WAV tạm
+        if st.session_state.audio_buffer:
+            temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+            with wave.open(temp_wav.name, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(48000)
+                wf.writeframes(b''.join(st.session_state.audio_buffer))
+
+            st.session_state.temp_wav_file = temp_wav.name
+        st.rerun()
+
+# Đang ghi âm
+if st.session_state.is_recording:
     elapsed = int(time.time() - st.session_state.start_time)
-    st.success(f"🔴 Đang ghi âm... {elapsed} giây")
+    minutes, seconds = divmod(elapsed, 60)
+    st.success(f"🔴 Đang ghi âm... {minutes:02d}:{seconds:02d}")
     webrtc_streamer(
         key="recorder",
         mode=WebRtcMode.SENDONLY,
         audio_frame_callback=audio_frame_callback,
         media_stream_constraints={"audio": True, "video": False},
-        rtc_configuration={
-            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-        },
+        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
         sendback_audio=False,
     )
 
-# Dừng ghi
-if is_recording and st.button("⏹ Dừng ghi âm"):
-    st.session_state.is_recording = False
-    st.session_state.start_time = None
-
-    if st.session_state.audio_buffer:
-        temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-        with wave.open(temp_wav.name, 'wb') as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(48000)
-            wf.writeframes(b''.join(st.session_state.audio_buffer))
-
-        st.session_state.temp_wav_file = temp_wav.name
-        st.audio(temp_wav.name, format="audio/wav")
-
-# Nếu có file tạm, hiển thị nút gửi
-if st.session_state.get("temp_wav_file", None):
+# Hiển thị bản ghi âm sau khi dừng
+if st.session_state.temp_wav_file:
     st.audio(st.session_state.temp_wav_file, format="audio/wav")
 
+    # Ghi lại
+    if st.button("🔁 Ghi lại"):
+        st.session_state.audio_buffer = []
+        st.session_state.temp_wav_file = None
+        st.session_state.start_time = None
+        st.session_state.is_recording = False
+        st.rerun()
+
+    # Gửi và xử lý
     if st.button("📤 Gửi và chuyển sang văn bản"):
         with open(st.session_state.temp_wav_file, 'rb') as f:
             files = {'file': f}
@@ -271,6 +275,20 @@ if st.session_state.get("temp_wav_file", None):
                 if response.status_code == 200:
                     data = response.json()
                     st.success(f"📌 Chủ đề: {data['subject']}\n\n📝 Tóm tắt: {data['summary']}")
+
+                    # Cho phép tải về file
+                    with open(st.session_state.temp_wav_file, "rb") as audio_file:
+                        audio_bytes = audio_file.read()
+                        st.download_button(
+                            label="⬇️ Tải xuống bản ghi",
+                            data=audio_bytes,
+                            file_name="ghi_am.wav",
+                            mime="audio/wav"
+                        )
+
+                    # Xóa file tạm khỏi session
+                    os.remove(st.session_state.temp_wav_file)
+                    st.session_state.temp_wav_file = None
                 else:
                     st.error("❌ Lỗi khi gửi file: " + response.text)
             except Exception as e:
