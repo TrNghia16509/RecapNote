@@ -222,94 +222,81 @@ lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", 
 #=========== Ghi âm (frontend) ===========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
-def audio_frame_callback(frame: av.AudioFrame):
-    audio = frame.to_ndarray()
-    sample_rate = frame.sample_rate
+def audio_frame_callback(frame):
+    audio = np.frombuffer(frame.to_ndarray(), dtype=np.int16)
+    st.session_state.audio_frames.append(audio)
 
-    # Lưu file tạm vào buffer
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-    sf.write(temp_file.name, audio.T, sample_rate)  # audio.T để chuyển từ shape (channels, samples)
-    
-    st.session_state.temp_wav_file = temp_file.name
+col1, col2 = st.columns([1, 3])
+with col1:
+    btn_label = "⏹ Dừng ghi âm" if st.session_state.recording else "🎙 Bắt đầu ghi âm"
+    if st.button(btn_label):
+        if not st.session_state.recording:
+            st.session_state.audio_frames = []
+            st.session_state.recording = True
+            st.session_state.start_time = time.time()
+        else:
+            st.session_state.recording = False
+            if st.session_state.audio_frames:
+                raw_audio = np.concatenate(st.session_state.audio_frames)
+                reduced_audio = nr.reduce_noise(
+                    y=raw_audio.astype(np.float32),
+                    sr=16000,
+                    prop_decrease=1.0
+                )
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+                sf.write(temp_file.name, reduced_audio, 16000)
+                st.session_state.temp_wav_file = temp_file.name
+                st.success("🎧 Đã lưu bản ghi!")
 
-record_button = st.button(
-    "⏺ Bắt đầu ghi âm" if not st.session_state.is_recording else "⏹ Dừng ghi âm"
-)
+with col2:
+    if st.session_state.recording:
+        elapsed = int(time.time() - st.session_state.start_time)
+        m, s = divmod(elapsed, 60)
+        st.success(f"🔴 Đang ghi âm... {m:02}:{s:02}")
 
-if record_button:
-    if not st.session_state.is_recording:
-        st.session_state.audio_buffer = []
-        st.session_state.start_time = time.time()
-        st.session_state.is_recording = True
-    else:
-        st.session_state.is_recording = False
-        st.session_state.start_time = None
-
-        # Lưu file WAV tạm
-        if st.session_state.audio_buffer:
-            temp_wav = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-            with wave.open(temp_wav.name, 'wb') as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2)
-                wf.setframerate(48000)
-                wf.writeframes(b''.join(st.session_state.audio_buffer))
-
-            st.session_state.temp_wav_file = temp_wav.name
-        st.rerun()
-
-# Đang ghi âm
-if st.session_state.is_recording:
-    elapsed = int(time.time() - st.session_state.start_time)
-    minutes, seconds = divmod(elapsed, 60)
-    st.success(f"🔴 Đang ghi âm... {minutes:02d}:{seconds:02d}")
+if st.session_state.recording:
     webrtc_streamer(
         key="recorder",
         mode=WebRtcMode.SENDONLY,
         audio_frame_callback=audio_frame_callback,
         media_stream_constraints={"audio": True, "video": False},
-        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-        sendback_audio=False,
     )
 
-# Hiển thị bản ghi âm sau khi dừng
-if st.session_state.temp_wav_file:
-    st.audio(st.session_state.temp_wav_file, format="audio/wav")
+if st.session_state.temp_wav_file and os.path.exists(st.session_state.temp_wav_file):
+    st.markdown("### 🔁 Nghe lại bản ghi")
+    st.audio(open(st.session_state.temp_wav_file, "rb").read(), format="audio/wav")
 
-    # Ghi lại
-    if st.button("🔁 Ghi lại"):
-        st.session_state.audio_buffer = []
-        st.session_state.temp_wav_file = None
-        st.session_state.start_time = None
-        st.session_state.is_recording = False
-        st.rerun()
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("📤 Gửi lên Flask"):
+            with open(st.session_state.temp_wav_file, "rb") as f:
+                files = {"file": f}
+                try:
+                    res = requests.post("https://flask-recapnote.onrender.com/upload_audio", files=files)
+                    if res.ok:
+                        data = res.json()
+                        st.success("✅ Gửi thành công!")
+                        st.markdown(f"**📌 Chủ đề:** {data['subject']}")
+                        st.markdown(f"**📝 Tóm tắt:** {data['summary']}")
 
-    # Gửi và xử lý
-    if st.button("📤 Gửi và chuyển sang văn bản"):
-        with open(st.session_state.temp_wav_file, 'rb') as f:
-            files = {'file': f}
-            try:
-                response = requests.post("https://flask-recapnote.onrender.com/upload_audio", files=files)
-                if response.status_code == 200:
-                    data = response.json()
-                    st.success(f"📌 Chủ đề: {data['subject']}\n\n📝 Tóm tắt: {data['summary']}")
+                        with open(st.session_state.temp_wav_file, "rb") as download_file:
+                            st.download_button(
+                                label="⬇️ Tải bản ghi",
+                                data=download_file.read(),
+                                file_name="recorded_clean.wav",
+                                mime="audio/wav",
+                            )
 
-                    # Cho phép tải về file
-                    with open(st.session_state.temp_wav_file, "rb") as audio_file:
-                        audio_bytes = audio_file.read()
-                        st.download_button(
-                            label="⬇️ Tải xuống bản ghi",
-                            data=audio_bytes,
-                            file_name="ghi_am.wav",
-                            mime="audio/wav"
-                        )
+                        os.remove(st.session_state.temp_wav_file)
+                        st.session_state.temp_wav_file = None
+                except Exception as e:
+                    st.error(f"❌ Gửi thất bại: {e}")
 
-                    # Xóa file tạm khỏi session
-                    os.remove(st.session_state.temp_wav_file)
-                    st.session_state.temp_wav_file = None
-                else:
-                    st.error("❌ Lỗi khi gửi file: " + response.text)
-            except Exception as e:
-                st.error(f"❌ Gửi thất bại: {e}")
+    with col_b:
+        if st.button("🔁 Ghi lại"):
+            os.remove(st.session_state.temp_wav_file)
+            st.session_state.temp_wav_file = None
+            st.experimental_rerun()
                 
 # ========= Tải file hoặc ghi âm =========
 uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
