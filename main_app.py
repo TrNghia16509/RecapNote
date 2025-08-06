@@ -20,7 +20,7 @@ from email.mime.text import MIMEText
 import streamlit.web.bootstrap
 from authlib.integrations.requests_client import OAuth2Session
 import requests
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import av
 
 # ========= Cấu hình =========
@@ -217,7 +217,6 @@ st.markdown("### 🎙 Ghi âm với streamlit-webrtc")
 ctx = webrtc_streamer(
     key="recorder",
     mode=WebRtcMode.SENDONLY,
-    client_settings=client_settings,
     audio_receiver_size=1024,
     media_stream_constraints={"audio": True, "video": False},
     audio_frame_callback=audio_callback,
