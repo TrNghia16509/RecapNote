@@ -231,7 +231,9 @@ def audio_frame_callback(frame: AudioFrame):
     st.session_state.audio_frames.append(audio)
 
 # ==== Save .wav file ====
-def save_audio(frames, sample_rate=48000):
+def save_audio(frames, filename="recorded.wav"):
+    if not frames:
+        return None
     raw_audio = np.concatenate(frames)
     reduced_audio = nr.reduce_noise(y=raw_audio, sr=sample_rate)
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
@@ -266,15 +268,12 @@ if st.button(btn_label):
         st.session_state.recording = False
         filepath = save_audio(st.session_state.audio_frames)
         st.success("✅ Ghi âm xong!")
-
-        with open(filepath, "rb") as f:
-            st.audio(f.read(), format="audio/wav")
-
-        # Hiển thị nút gửi
-        if st.button("📤 Gửi và chuyển văn bản"):
-            result = upload_audio(filepath)
-            st.success("📌 Chủ đề: " + result.get("subject", "Không rõ"))
-            st.info("📝 Tóm tắt:\n" + result.get("summary", "Không có"))
+        if filepath:
+            # Hiển thị nút gửi
+            if st.button("📤 Gửi và chuyển văn bản"):
+                result = upload_audio(filepath)
+                st.success("📌 Chủ đề: " + result.get("subject", "Không rõ"))
+                st.info("📝 Tóm tắt:\n" + result.get("summary", "Không có"))
 
             # Tải về
             with open(filepath, "rb") as f:
@@ -283,7 +282,12 @@ if st.button(btn_label):
             # Dọn session
             os.remove(filepath)
             st.session_state.temp_wav_file = None
-
+        else:
+            st.warning("⚠️ Không có dữ liệu ghi âm để xử lý.")
+            
+        with open(filepath, "rb") as f:
+            st.audio(f.read(), format="audio/wav")
+            
         # Cho phép ghi lại
         if st.button("🔄 Ghi lại"):
             st.session_state.audio_frames = []
