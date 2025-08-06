@@ -235,10 +235,12 @@ if st.session_state.get("is_recording", False):
     webrtc_streamer(
         key="recorder",
         mode=WebRtcMode.SENDONLY,
-        in_audio_enabled=True,
-        out_audio_enabled=False,
         audio_frame_callback=audio_frame_callback,
         media_stream_constraints={"audio": True, "video": False},
+        rtc_configuration={
+            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+        },
+        sendback_audio=False,
     )
 
 # Dừng ghi
