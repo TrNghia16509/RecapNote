@@ -247,7 +247,7 @@ recordButton.onclick = async function() {
         const formData = new FormData();
         formData.append("file", audioBlob, "recorded.wav");
 
-        const response = await fetch("https://flask-recapnote.onrender.com/upload_audio", {
+        const response = await fetch("https://flask-recapnote.onrender.com", {
             method: "POST",
             body: formData
         });
