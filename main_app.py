@@ -34,33 +34,14 @@ RESET_URL = os.getenv("RESET_URL")
 RESET_TOKEN_PATH = "reset_tokens"
 os.makedirs(RESET_TOKEN_PATH, exist_ok=True)
 #================ Khởi tạo session_state ================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if "profile" not in st.session_state:
-    st.session_state.profile = None
-
-# Khởi tạo session state
 if "recording" not in st.session_state:
     st.session_state.recording = False
-
-if "audio_buffer" not in st.session_state:
-    st.session_state.audio_buffer = []
-
-if "recorded_file_path" not in st.session_state:
-    st.session_state.recorded_file_path = None
-
 if "start_time" not in st.session_state:
     st.session_state.start_time = 0
-
-if "temp_wav_file" not in st.session_state:
-    st.session_state.temp_wav_file = None
-    
-if "summary_result" not in st.session_state:
-    st.session_state.summary_result = None
-
-if "audio_frames" not in st.session_state:
-    st.session_state.audio_frames = []
+if "audio_saved" not in st.session_state:
+    st.session_state.audio_saved = False
+if "audio_url" not in st.session_state:
+    st.session_state.audio_url = ""
     
 #==================== Đặt lại mật khẩu ============================
 query_params = st.query_params
@@ -225,87 +206,66 @@ lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", 
 # ========== Ghi âm (frontend) ==========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
-sample_rate = 16000
+# Giao diện HTML + JavaScript ghi âm
+st.markdown("""
+<style>
+    button {
+        margin-right: 10px;
+    }
+</style>
 
-# ==== Audio processing ====
-def audio_frame_callback(frame: AudioFrame):
-    audio = frame.to_ndarray().flatten().astype(np.float32)
-    st.session_state.audio_frames.append(audio)
+<button id="recordButton">🎙 Bắt đầu ghi âm</button>
+<button id="stopButton" disabled>⏹ Dừng ghi</button>
+<audio id="audioPlayback" controls></audio>
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let startTime;
 
-# ==== Save .wav file ====
-def save_audio(frames, filename="recorded.wav"):
-    if not frames:
-        return None
-    raw_audio = np.concatenate(frames)
-    reduced_audio = nr.reduce_noise(y=raw_audio, sr=sample_rate)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-        with wave.open(f.name, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(sample_rate)
-            wf.writeframes((reduced_audio * 32767).astype(np.int16).tobytes())
-        st.session_state.temp_wav_file = f.name
-    return f.name
+const recordButton = document.getElementById("recordButton");
+const stopButton = document.getElementById("stopButton");
+const audioPlayback = document.getElementById("audioPlayback");
 
-# ==== Upload to Flask ====
-def upload_audio(filepath):
-    url = "https://flask-recapnote.onrender.com/upload_audio"
-    with open(filepath, "rb") as f:
-        files = {"file": (os.path.basename(filepath), f, "audio/wav")}
-        response = requests.post(url, files=files)
-    return response.json()
+recordButton.onclick = async function() {
+    audioChunks = [];
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
 
-# ==== Giao diện chính ====
-btn_label = "⏹ Dừng ghi âm" if st.session_state.recording else "🎙 Bắt đầu ghi âm"
-if st.button(btn_label):
-    if not st.session_state.recording:
-        # Bắt đầu ghi
-        st.session_state.recording = True
-        st.session_state.start_time = time.time()
-        st.session_state.audio_frames = []
-    else:
-        # Dừng ghi
-        st.session_state.recording = False
-        filepath = save_audio(st.session_state.audio_frames)
-        if filepath:
-            st.success("✅ Ghi âm xong!")
+    mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+    };
 
-            # Cho phép nghe lại
-            with open(filepath, "rb") as f:
-                st.audio(f.read(), format="audio/wav")
+    mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioPlayback.src = audioUrl;
 
-            # Nút gửi về backend
-            if st.button("📤 Gửi và chuyển văn bản"):
-                result = upload_audio(filepath)
-                st.success("📌 Chủ đề: " + result.get("subject", "Không rõ"))
-                st.info("📝 Tóm tắt:\n" + result.get("summary", "Không có"))
+        const formData = new FormData();
+        formData.append("file", audioBlob, "recorded.wav");
 
-            # Tải về
-            with open(filepath, "rb") as f:
-                st.download_button("⬇️ Tải file ghi âm", f, file_name="recorded.wav")
+        const response = await fetch("https://flask-recapnote.onrender.com/upload_audio", {
+            method: "POST",
+            body: formData
+        });
 
-            # Cho phép ghi lại
-            if st.button("🔄 Ghi lại"):
-                st.session_state.audio_frames = []
-                st.session_state.temp_wav_file = None
-                st.rerun()
+        const result = await response.json();
+        alert("📌 Chủ đề: " + result.subject + "\n📝 Tóm tắt: " + result.summary);
+    };
 
-            # Xóa file temp nếu không cần
-            os.remove(filepath)
-            st.session_state.temp_wav_file = None
-        else:
-            st.warning("⚠️ Không có dữ liệu ghi âm để xử lý.")
+    mediaRecorder.start();
+    recordButton.disabled = true;
+    stopButton.disabled = false;
+    startTime = Date.now();
+};
 
-# ==== Hiển thị thời gian ghi âm + kích hoạt mic ====
-if st.session_state.recording:
-    elapsed = int(time.time() - st.session_state.start_time)
-    st.success(f"🔴 Đang ghi âm... {elapsed//60:02}:{elapsed%60:02} phút:giây")
-    webrtc_streamer(
-        key="recorder",
-        mode=WebRtcMode.SENDONLY,
-        audio_frame_callback=audio_frame_callback,
-        media_stream_constraints={"audio": True, "video": False},
-    )
+stopButton.onclick = function() {
+    mediaRecorder.stop();
+    recordButton.disabled = false;
+    stopButton.disabled = true;
+};
+</script>
+""", unsafe_allow_html=True)
+
 # ========= Tải file hoặc ghi âm =========
 uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
 
