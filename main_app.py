@@ -42,6 +42,10 @@ if "audio_saved" not in st.session_state:
     st.session_state.audio_saved = False
 if "audio_url" not in st.session_state:
     st.session_state.audio_url = ""
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "profile" not in st.session_state:
+    st.session_state.profile = None
     
 #==================== Đặt lại mật khẩu ============================
 query_params = st.query_params
