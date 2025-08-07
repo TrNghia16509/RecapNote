@@ -23,6 +23,10 @@ import requests
 from streamlit_webrtc import webrtc_streamer, WebRtcMode
 from av import AudioFrame
 import time
+from b2sdk.v2 import InMemoryAccountInfo, B2Api
+import bcrypt
+from io import BytesIO
+import json
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -33,6 +37,11 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 RESET_URL = os.getenv("RESET_URL")
 RESET_TOKEN_PATH = "reset_tokens"
 os.makedirs(RESET_TOKEN_PATH, exist_ok=True)
+info = InMemoryAccountInfo()
+b2_api = B2Api(info)
+b2_api.authorize_account("production", os.getenv("B2_APPLICATION_KEY_ID"), os.getenv("B2_APPLICATION_KEY"))
+bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
+
 #================ Khởi tạo session_state ================
 if "recording" not in st.session_state:
     st.session_state.recording = False
@@ -126,14 +135,13 @@ def login():
         u = st.text_input("Tên đăng nhập hoặc email")
         p = st.text_input("Mật khẩu", type="password")
         if st.button("Đăng nhập", key="login_btn"):
-            row = c.execute("SELECT * FROM users WHERE (username=? OR email=?) AND password=?", (u, u, p)).fetchone()
-            if row:
+            row = c.execute("SELECT * FROM users WHERE (username=? OR email=?)", (u, u)).fetchone()
+            if row and bcrypt.checkpw(p.encode('utf-8'), row[1]):
                 st.session_state.logged_in = True
                 st.session_state.username = row[0]
                 st.success("✅ Đăng nhập thành công!")
             else:
                 st.error("Sai tài khoản hoặc mật khẩu.")
-
         # Đăng nhập bằng Google
         if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
             client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -169,7 +177,8 @@ def register():
             if pw1 != pw2:
                 st.warning("❌ Mật khẩu không khớp.")
             else:
-                c.execute("INSERT INTO users VALUES (?, ?, ?)", (new_user, pw1, email))
+                hashed_pw = bcrypt.hashpw(pw1.encode('utf-8'), bcrypt.gensalt())
+                c.execute("INSERT INTO users VALUES (?, ?, ?)", (new_user, hashed_pw, email))
                 conn.commit()
                 st.success("✅ Đăng ký thành công. Hãy đăng nhập.")
 
@@ -269,7 +278,20 @@ stopButton.onclick = function() {
 };
 </script>
 """, unsafe_allow_html=True)
+# ================= Hàm upload lên BackBlaze =======================
+def upload_note_to_b2(username, note_data):
+    note_filename = f"{username}/notes/{datetime.now().isoformat()}.json"
+    json_bytes = BytesIO(json.dumps(note_data, ensure_ascii=False).encode("utf-8"))
+    bucket.upload_bytes(json_bytes, note_filename, content_type="application/json")
 
+def list_notes_from_b2(username):
+    prefix = f"{username}/notes/"
+    notes = []
+    for file_version, _ in bucket.ls(prefix):
+        note_file = bucket.download_file_by_name(file_version.file_name).read()
+        notes.append(json.loads(note_file.decode("utf-8")))
+    return notes
+    
 # ========= Tải file hoặc ghi âm =========
 uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
 
@@ -335,24 +357,28 @@ if uploaded_file:
     note = st.text_input("📝 Ghi chú thêm")
     if st.session_state.logged_in:
         if st.button("💾 Lưu ghi chú"):
-            c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?)", (
-                st.session_state.username, title, subject, summary, text_result,
-                datetime.now().isoformat(), note
-            ))
-            conn.commit()
-            st.success("Đã lưu!")
+            note_data = {
+                "username": st.session_state.username,
+                "title": title,
+                "subject": subject,
+                "summary": summary,
+                "content": text_result,
+                "timestamp": datetime.now().isoformat(),
+                "note": note
+            }
+            upload_note_to_b2(st.session_state.username, note_data)
+            st.success("✅ Ghi chú đã được lưu")
     else:
         st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
 
 # ========= Hiển thị ghi chú =========
 if st.session_state.logged_in:
     st.subheader("📂 Ghi chú đã lưu")
-    rows = c.execute("SELECT title, summary, timestamp, note FROM notes WHERE username=?", (st.session_state.username,)).fetchall()
-    for r in rows:
-        with st.expander(f"📝 {r[0]} ({r[2][:10]})"):
-
-            st.markdown(f"**Tóm tắt:** {r[1]}")
-            st.markdown(f"**Ghi chú:** {r[3]}")
+    notes = list_notes_from_b2(st.session_state.username)
+    for n in sorted(notes, key=lambda x: x["timestamp"], reverse=True):
+        with st.expander(f"📝 {n['title']} ({n['timestamp'][:10]})"):
+            st.markdown(f"**Tóm tắt:** {n['summary']}")
+            st.markdown(f"**Ghi chú:** {n['note']}")
 # ============ Chạy ==================
 port = int(os.environ.get("PORT", 8501))
 
