@@ -13,3 +13,4 @@ requests
 authlib
 streamlit-webrtc
 soundfile
+boto3
