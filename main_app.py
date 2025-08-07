@@ -280,9 +280,17 @@ stopButton.onclick = function() {
 """, unsafe_allow_html=True)
 # ================= Hàm upload lên BackBlaze =======================
 def upload_note_to_b2(username, note_data):
-    note_filename = f"{username}/notes/{datetime.now().isoformat()}.json"
-    json_bytes = BytesIO(json.dumps(note_data, ensure_ascii=False).encode("utf-8"))
+    import json
+    note_filename = f"{username}/{note_data['title']}_{note_data['timestamp']}.json"
+    json_bytes = json.dumps(note_data).encode("utf-8")
+
+    info = InMemoryAccountInfo()
+    b2_api = B2Api(info)
+    b2_api.authorize_account("production", os.getenv("B2_APPLICATION_KEY_ID"), os.getenv("B2_APPLICATION_KEY"))
+    bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
+
     bucket.upload_bytes(json_bytes, note_filename, content_type="application/json")
+    return note_filename
 
 def list_notes_from_b2(username):
     prefix = f"{username}/notes/"
