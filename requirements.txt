@@ -14,3 +14,5 @@ authlib
 streamlit-webrtc
 soundfile
 boto3
+bcrypt
+b2sdk
