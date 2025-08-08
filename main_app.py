@@ -143,7 +143,7 @@ def login():
         if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
             client_id = os.getenv("GOOGLE_CLIENT_ID")
             client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-            redirect_uri = "https://recapnote.up.railway.app/"
+            redirect_uri = "https://recapnote.up.railway.app/login/callback"
 
             oauth = OAuth2Session(
                 client_id,
