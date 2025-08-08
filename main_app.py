@@ -278,115 +278,87 @@ stopButton.onclick = function() {
 };
 </script>
 """, unsafe_allow_html=True)
-# ================= Hàm upload lên BackBlaze =======================
-def upload_note_to_b2(username, note_data):
-    import json
-    note_filename = f"{username}/{note_data['title']}_{note_data['timestamp']}.json"
-    json_bytes = json.dumps(note_data).encode("utf-8")
 
-    info = InMemoryAccountInfo()
-    b2_api = B2Api(info)
-    b2_api.authorize_account("production", os.getenv("B2_APPLICATION_KEY_ID"), os.getenv("B2_APPLICATION_KEY"))
-    bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
+# ==================== Tải file =====================
+API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
 
-    bucket.upload_bytes(json_bytes, note_filename, content_type="application/json")
-    return note_filename
+# DB local để lưu metadata
+conn = sqlite3.connect("notes.db", check_same_thread=False)
+c = conn.cursor()
+c.execute("""CREATE TABLE IF NOT EXISTS notes (
+    username TEXT,
+    title TEXT,
+    subject TEXT,
+    summary TEXT,
+    json_url TEXT,
+    timestamp TEXT)""")
+conn.commit()
 
-def list_notes_from_b2(username):
-    prefix = f"{username}/notes/"
-    notes = []
-    for file_version, _ in bucket.ls(prefix):
-        note_file = bucket.download_file_by_name(file_version.file_name).read()
-        notes.append(json.loads(note_file.decode("utf-8")))
-    return notes
-    
-# ========= Tải file hoặc ghi âm =========
-uploaded_file = st.file_uploader("📤 Tải lên file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-def transcribe_audio(file, language="vi"):
-    model = WhisperModel("small", compute_type="int8")
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(file.read())
-        tmp_path = tmp.name
-    segments, info = model.transcribe(tmp_path, language=None if language == "auto" else language)
-    os.remove(tmp_path)
-    return "\n".join([seg.text for seg in segments]), info.language
+st.header("📤 Tải file / ghi âm để xử lý")
+file = st.file_uploader("Chọn file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
 
-def extract_text_from_pdf(file):
-    doc = fitz.open(stream=file.read(), filetype="pdf")
-    text = "\n".join([page.get_text() for page in doc])
-    return text
+if file:
+    with st.spinner("⏳ Đang xử lý..."):
+        files = {"file": (file.name, file, file.type)}
+        resp = requests.post(f"{API_URL}/process_file", files=files)
+        if resp.status_code == 200:
+            data = resp.json()
+            st.subheader("📌 Chủ đề")
+            st.write(data["subject"])
+            st.subheader("📚 Tóm tắt")
+            st.write(data["summary"])
+            st.subheader("📄 Nội dung")
+            st.text_area("", data["full_text"], height=300)
 
-def extract_text_from_docx(file):
-    doc = docx.Document(file)
-    return "\n".join([p.text for p in doc.paragraphs])
-
-# ========= Phân loại và xử lý =========
-text_result = ""
-if uploaded_file:
-    if uploaded_file.name.endswith(".pdf"):
-        text_result = extract_text_from_pdf(uploaded_file)
-    elif uploaded_file.name.endswith(".docx"):
-        text_result = extract_text_from_docx(uploaded_file)
-    else:
-        text_result, lang_detected = transcribe_audio(uploaded_file, language=lang)
-    st.success("✅ Nội dung đã xử lý:")
-    st.text_area("📄 Nội dung", text_result, height=300)
-
-    # Tóm tắt và AI xử lý
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    subject_prompt = f"Chủ đề chính của nội dung sau là gì? {text_result}"
-    
-    subject = model.generate_content(subject_prompt).text.strip()
-
-    summary_prompt = f"Bạn là chuyên gia về {subject}. Tóm tắt nội dung: {text_result}"
-    summary = model.generate_content(summary_prompt).text.strip()
-
-    st.subheader("📚 Tóm tắt bởi AI")
-    st.write(summary)
-
-    # Chatbot
-    st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
-    if "chat" not in st.session_state:
-        st.session_state.chat = []
-    for msg in st.session_state.chat:
-        st.chat_message(msg["role"]).write(msg["content"])
-    q = st.chat_input("Nhập câu hỏi...")
-    if q:
-        st.chat_message("user").write(q)
-        ai = model.start_chat(history=[{"role": "user", "parts": text_result}])
-        r = ai.send_message(q)
-        st.chat_message("assistant").write(r.text)
-        st.session_state.chat.append({"role": "user", "content": q})
-        st.session_state.chat.append({"role": "assistant", "content": r.text})
-
-    # Ghi chú và lưu
-    title = subject
-    note = st.text_input("📝 Ghi chú thêm")
-    if st.session_state.logged_in:
-        if st.button("💾 Lưu ghi chú"):
-            note_data = {
-                "username": st.session_state.username,
-                "title": title,
-                "subject": subject,
-                "summary": summary,
-                "content": text_result,
-                "timestamp": datetime.now().isoformat(),
-                "note": note
-            }
-            upload_note_to_b2(st.session_state.username, note_data)
-            st.success("✅ Ghi chú đã được lưu")
-    else:
+            # Chatbot
+            st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
+            if "chat" not in st.session_state:
+                st.session_state.chat = []
+            for msg in st.session_state.chat:
+                st.chat_message(msg["role"]).write(msg["content"])
+            q = st.chat_input("Nhập câu hỏi...")
+            if q:
+                st.chat_message("user").write(q)
+                ai = model.start_chat(history=[{"role": "user", "parts": text_result}])
+                r = ai.send_message(q)
+                st.chat_message("assistant").write(r.text)
+                st.session_state.chat.append({"role": "user", "content": q})
+                st.session_state.chat.append({"role": "assistant", "content": r.text})
+                
+            if st.session_state.logged_in:
+                if st.button("💾 Lưu ghi chú"):
+                    c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
+                        st.session_state.username,
+                        data["subject"],
+                        data["subject"],
+                        data["summary"],
+                        data["json_url"],
+                        datetime.now().isoformat()
+                    ))
+                    conn.commit()
+                    st.success("Đã lưu!")
+        else:
         st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
 
 # ========= Hiển thị ghi chú =========
 if st.session_state.logged_in:
     st.subheader("📂 Ghi chú đã lưu")
-    notes = list_notes_from_b2(st.session_state.username)
-    for n in sorted(notes, key=lambda x: x["timestamp"], reverse=True):
-        with st.expander(f"📝 {n['title']} ({n['timestamp'][:10]})"):
-            st.markdown(f"**Tóm tắt:** {n['summary']}")
-            st.markdown(f"**Ghi chú:** {n['note']}")
+    rows = c.execute(
+        "SELECT title, summary, timestamp, json_url FROM notes WHERE username=?",
+        (st.session_state.username,)
+    ).fetchall()
+    for r in rows:
+        with st.expander(f"📝 {r[0]} ({r[2][:10]})"):
+            st.markdown(f"**Tóm tắt:** {r[1]}")
+            if st.button("📥 Xem chi tiết", key=r[3]):
+                json_data = requests.get(r[3]).json()
+                st.text_area("📄 Nội dung", json_data["full_text"], height=300)
+                st.markdown(f"[Tải file gốc]({json_data['file_url']})")
 # ============ Chạy ==================
 port = int(os.environ.get("PORT", 8501))
 
