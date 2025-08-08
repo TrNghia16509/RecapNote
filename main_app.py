@@ -211,7 +211,31 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 """)
 
 # ========= Chọn ngôn ngữ =========
-lang = st.selectbox("🌍 Chọn ngôn ngữ đầu vào", ["auto", "vi", "en", "fr", "ja"])
+# Mapping từ tên ngôn ngữ sang mã ISO
+LANGUAGE_MAP = {
+    "Auto Detect": "auto",
+    "Vietnamese": "vi",
+    "English": "en",
+    "Japanese": "ja",
+    "Korean": "ko",
+    "French": "fr",
+    "Chinese": "zh"
+}
+
+selected_lang_name = st.selectbox(
+    "Select language",
+    list(LANGUAGE_MAP.keys()),  # Hiển thị tên ngôn ngữ
+    index=1  # Mặc định English
+)
+
+selected_lang_code = LANGUAGE_MAP[selected_lang_name]
+
+# Khi gửi request
+res = requests.post(
+    "https://your-backend.com/process_file",
+    files={"file": uploaded_file},
+    data={"language_code": selected_lang_code}  # Gửi mã ngôn ngữ
+)
 
 # ========== Ghi âm (frontend) ==========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
