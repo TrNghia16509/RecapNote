@@ -3,7 +3,6 @@ import os
 import sqlite3
 from datetime import datetime
 from dotenv import load_dotenv
-from faster_whisper import WhisperModel
 from pydub import AudioSegment
 import tempfile
 import wave
@@ -11,7 +10,6 @@ import numpy as np
 import queue
 import threading
 import google.generativeai as genai
-import fitz  # PyMuPDF
 import docx
 from io import BytesIO
 import secrets
@@ -20,7 +18,6 @@ from email.mime.text import MIMEText
 import streamlit.web.bootstrap
 from authlib.integrations.requests_client import OAuth2Session
 import requests
-from streamlit_webrtc import webrtc_streamer, WebRtcMode
 from av import AudioFrame
 import time
 from b2sdk.v2 import InMemoryAccountInfo, B2Api
