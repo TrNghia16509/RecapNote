@@ -1,10 +1,9 @@
 streamlit
 flask
-faster-whisper
 google-generativeai
 python-dotenv
 pydub
-PyMuPDF
+pdfplumber
 python-docx
 numpy
 email-validator
