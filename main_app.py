@@ -211,7 +211,7 @@ with st.expander("📘 Hướng dẫn sử dụng"):
 """)
 
 # ========= Chọn ngôn ngữ =========
-# Mapping từ tên ngôn ngữ sang mã ISO
+# Chọn ngôn ngữ
 LANGUAGE_MAP = {
     "Auto Detect": "auto",
     "Vietnamese": "vi",
@@ -222,12 +222,7 @@ LANGUAGE_MAP = {
     "Chinese": "zh"
 }
 
-selected_lang_name = st.selectbox(
-    "Select language",
-    list(LANGUAGE_MAP.keys()),  # Hiển thị tên ngôn ngữ
-    index=1  # Mặc định English
-)
-
+selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), index=1)
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
@@ -328,42 +323,44 @@ if file:
             stream=True     # Hỗ trợ streaming kết quả
         )
 
-        if resp.status_code == 200:
-            data = resp.json()
+       if res.status_code == 200:
+            data = res.json()
             st.subheader("📌 Chủ đề")
             st.write(data["subject"])
             st.subheader("📚 Tóm tắt")
             st.write(data["summary"])
             st.subheader("📄 Nội dung")
-            st.text_area("Full Text", data["full_text"], height=300, label_visibility="collapsed")
+            st.text_area("", data["full_text"], height=300, label_visibility="collapsed")
+        else:
+            st.error(f"Lỗi: {res.text}")
 
-            # Chatbot
-            st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
-            if "chat" not in st.session_state:
-                st.session_state.chat = []
-            for msg in st.session_state.chat:
-                st.chat_message(msg["role"]).write(msg["content"])
-            q = st.chat_input("Nhập câu hỏi...")
-            if q:
-                st.chat_message("user").write(q)
-                ai = model.start_chat(history=[{"role": "user", "parts": text_result}])
-                r = ai.send_message(q)
-                st.chat_message("assistant").write(r.text)
-                st.session_state.chat.append({"role": "user", "content": q})
-                st.session_state.chat.append({"role": "assistant", "content": r.text})
+        # Chatbot
+        st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
+        if "chat" not in st.session_state:
+            st.session_state.chat = []
+        for msg in st.session_state.chat:
+            st.chat_message(msg["role"]).write(msg["content"])
+        q = st.chat_input("Nhập câu hỏi...")
+        if q:
+            st.chat_message("user").write(q)
+            ai = model.start_chat(history=[{"role": "user", "parts": text_result}])
+            r = ai.send_message(q)
+            st.chat_message("assistant").write(r.text)
+            st.session_state.chat.append({"role": "user", "content": q})
+            st.session_state.chat.append({"role": "assistant", "content": r.text})
                 
-            if st.session_state.logged_in:
-                if st.button("💾 Lưu ghi chú"):
-                    c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
-                        st.session_state.username,
-                        data["subject"],
-                        data["subject"],
-                        data["summary"],
-                        data["json_url"],
-                        datetime.now().isoformat()
-                    ))
-                    conn.commit()
-                    st.success("Đã lưu!")
+        if st.session_state.logged_in:
+            if st.button("💾 Lưu ghi chú"):
+                c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
+                    st.session_state.username,
+                    data["subject"],
+                    data["subject"],
+                    data["summary"],
+                    data["json_url"],
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+                st.success("Đã lưu!")
         else:
             st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
 
