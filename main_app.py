@@ -343,7 +343,7 @@ if file:
                     conn.commit()
                     st.success("Đã lưu!")
         else:
-        st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
+            st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
 
 # ========= Hiển thị ghi chú =========
 if st.session_state.logged_in:
