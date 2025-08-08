@@ -310,7 +310,7 @@ if file:
             st.subheader("📚 Tóm tắt")
             st.write(data["summary"])
             st.subheader("📄 Nội dung")
-            st.text_area("", data["full_text"], height=300)
+            st.text_area("Full Text", data["full_text"], height=300, label_visibility="collapsed")
 
             # Chatbot
             st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
