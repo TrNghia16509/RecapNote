@@ -324,6 +324,8 @@ if file:
             "https://flask-recapnote.onrender.com",
             files = {"file": (file.name, file, file.type)},
             data={"language_code": selected_lang_code}  # Gửi mã ngôn ngữ
+            timeout=None,   # Không giới hạn thời gian chờ
+            stream=True     # Hỗ trợ streaming kết quả
         )
 
         if resp.status_code == 200:
