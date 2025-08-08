@@ -321,7 +321,7 @@ if file:
         # resp = requests.post(f"{API_URL}/process_file", files=files)
         # Khi gửi request
         res = requests.post(
-            "https://your-backend.com/process_file",
+            "https://flask-recapnote.onrender.com",
             files = {"file": (file.name, file, file.type)},
             data={"language_code": selected_lang_code}  # Gửi mã ngôn ngữ
         )
