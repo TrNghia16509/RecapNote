@@ -318,7 +318,7 @@ if file:
         res = requests.post(
             f"{API_URL}/process_file",
             files = {"file": (file.name, file, file.type)},
-            data={"language_code": selected_lang_code}  # Gửi mã ngôn ngữ
+            data={"language_code": selected_lang_code},  # Gửi mã ngôn ngữ
             timeout=None,   # Không giới hạn thời gian chờ
             stream=True     # Hỗ trợ streaming kết quả
         )
