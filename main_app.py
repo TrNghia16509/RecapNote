@@ -230,13 +230,6 @@ selected_lang_name = st.selectbox(
 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
-# Khi gửi request
-res = requests.post(
-    "https://your-backend.com/process_file",
-    files={"file": uploaded_file},
-    data={"language_code": selected_lang_code}  # Gửi mã ngôn ngữ
-)
-
 # ========== Ghi âm (frontend) ==========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
@@ -325,8 +318,14 @@ file = st.file_uploader("Chọn file (.mp3, .wav, .pdf, .docx)", type=["mp3", "w
 
 if file:
     with st.spinner("⏳ Đang xử lý..."):
-        files = {"file": (file.name, file, file.type)}
-        resp = requests.post(f"{API_URL}/process_file", files=files)
+        # resp = requests.post(f"{API_URL}/process_file", files=files)
+        # Khi gửi request
+        res = requests.post(
+            "https://your-backend.com/process_file",
+            files = {"file": (file.name, file, file.type)},
+            data={"language_code": selected_lang_code}  # Gửi mã ngôn ngữ
+        )
+
         if resp.status_code == 200:
             data = resp.json()
             st.subheader("📌 Chủ đề")
