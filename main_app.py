@@ -301,7 +301,7 @@ st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 # 1. Khai báo component
 _component_dir = os.path.join(os.path.dirname(__file__), "st_react_mic", "frontend", "build")
 st_react_mic = components.declare_component("st_react_mic", path=_component_dir)
-st.write("📂 Component path:", build_dir, os.path.exists(build_dir))
+st.write("📂 Component path:", _component_dir, os.path.exists(_component_dir))
 
 # 2. Hiển thị component
 audio_base64 = st_react_mic(key="mic1")
