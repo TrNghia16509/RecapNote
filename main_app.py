@@ -291,80 +291,47 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
+class AudioProcessor(AudioProcessorBase):
+    def __init__(self) -> None:
+        self.audio_frames = []
 
-API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
+    def recv_audio(self, frame: av.AudioFrame) -> av.AudioFrame:
+        # Lấy dữ liệu audio dạng numpy
+        audio_data = frame.to_ndarray()
+        self.audio_frames.append(audio_data)
+        return frame
 
-st.markdown(f"""
-<style>
-    button {{
-        margin-right: 10px;
-    }}
-</style>
+st.header("🎙 Ghi âm trực tiếp")
 
-<button id="recordButton">🎙 Bắt đầu ghi âm</button>
-<button id="stopButton" disabled>⏹ Dừng ghi</button>
-<audio id="audioPlayback" controls></audio>
+webrtc_ctx = webrtc_streamer(
+    key="recorder",
+    mode=WebRtcMode.SENDONLY,
+    audio_processor_factory=AudioProcessor,
+    media_stream_constraints={"audio": True, "video": False},
+)
 
-<script>
-let mediaRecorder;
-let audioChunks = [];
+if st.button("⏹ Dừng và lưu"):
+    if webrtc_ctx.audio_processor:
+        audio_data = np.concatenate(webrtc_ctx.audio_processor.audio_frames)
+        wav_bytes = BytesIO()
+        with wave.open(wav_bytes, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 16-bit
+            wf.setframerate(44100)
+            wf.writeframes(audio_data.tobytes())
+        wav_bytes.seek(0)
 
-const recordButton = document.getElementById("recordButton");
-const stopButton = document.getElementById("stopButton");
-const audioPlayback = document.getElementById("audioPlayback");
+        st.audio(wav_bytes, format="audio/wav")
 
-recordButton.onclick = async function() {{
-    audioChunks = [];
-    try {{
-        const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
-        mediaRecorder = new MediaRecorder(stream, {{ mimeType: 'audio/webm' }});
-
-        mediaRecorder.ondataavailable = event => {{
-            if (event.data.size > 0) {{
-                audioChunks.push(event.data);
-            }}
-        }};
-
-        mediaRecorder.onstop = async () => {{
-            const audioBlob = new Blob(audioChunks, {{ type: 'audio/webm' }});
-            const audioUrl = URL.createObjectURL(audioBlob);
-            audioPlayback.src = audioUrl;
-
-            const formData = new FormData();
-            formData.append("file", audioBlob, "recorded.webm");
-            formData.append("language_code", "auto");
-
-            const response = await fetch("{API_URL}/process_file", {{
-                method: "POST",
-                body: formData
-            }});
-
-            if (!response.ok) {{
-                alert("❌ Lỗi xử lý file!");
-                return;
-            }}
-
-            const result = await response.json();
-            alert("📌 Chủ đề: " + result.subject + "\\n📝 Tóm tắt: " + result.summary);
-        }};
-
-        mediaRecorder.start();
-        recordButton.disabled = true;
-        stopButton.disabled = false;
-
-    }} catch (err) {{
-        alert("❌ Không thể truy cập micro: " + err);
-    }}
-}};
-
-stopButton.onclick = function() {{
-    mediaRecorder.stop();
-    recordButton.disabled = false;
-    stopButton.disabled = true;
-}};
-</script>
-""", unsafe_allow_html=True)
+        # Gửi file sang Flask API xử lý
+        files = {"file": ("recorded.wav", wav_bytes, "audio/wav")}
+        res = requests.post(f"{API_URL}/process_file", files=files, data={"language_code": "auto"})
+        if res.ok:
+            data = res.json()
+            st.success(f"📌 Chủ đề: {data['subject']}")
+            st.write(f"📝 {data['summary']}")
+        else:
+            st.error(f"Lỗi: {res.text}")
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
