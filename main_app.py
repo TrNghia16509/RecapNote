@@ -295,95 +295,54 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-API_URL = "https://flask-recapnote.onrender.com/process_file"
-
 st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
-react_mic_html = f"""
-<div id="root" style="padding:20px;background:#222;color:white;border-radius:10px;max-width:600px;margin:auto;">
-</div>
-
-<!-- React & ReactDOM -->
+components.html("""
+<div id="root"></div>
 <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-
-<!-- React-Mic -->
-<script src="https://unpkg.com/react-mic/dist/react-mic.min.js"></script>
+<script src="https://unpkg.com/react-mic/dist/react-mic.js"></script>
 
 <script>
-const ReactMic = window['react-mic'].ReactMic;
 const e = React.createElement;
+const { ReactMic } = window;
 
-class Recorder extends React.Component {{
-  constructor(props) {{
-    super(props);
-    this.state = {{ record: false, blobURL: null }};
-  }}
+function App() {
+  const [record, setRecord] = React.useState(false);
 
-  startRecording = () => {{
-    this.setState({{ record: true }});
-  }}
-
-  stopRecording = () => {{
-    this.setState({{ record: false }});
-  }}
-
-  onStop = (recordedBlob) => {{
-    console.log("Recorded blob:", recordedBlob);
-    this.setState({{ blobURL: URL.createObjectURL(recordedBlob.blob) }});
-
+  const onStop = (recordedBlob) => {
+    console.log('recordedBlob is: ', recordedBlob);
     const formData = new FormData();
     formData.append("file", recordedBlob.blob, "recorded.wav");
-    formData.append("language_code", "auto");
 
-    fetch("{API_URL}", {{
+    fetch("https://flask-recapnote.onrender.com/process_file", {
       method: "POST",
       body: formData
-    }})
+    })
     .then(res => res.json())
-    .then(data => {{
+    .then(data => {
       alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-    }})
-    .catch(err => {{
-      alert("❌ Lỗi khi gửi file: " + err);
-    }});
-  }}
+    })
+    .catch(err => console.error(err));
+  };
 
-  render() {{
-    return e('div', {{ style: {{ textAlign: 'center' }} }},
-      e(ReactMic, {{
-        record: this.state.record,
-        className: "sound-wave",
-        onStop: this.onStop,
-        strokeColor: "#FF4081",
-        backgroundColor: "#000",
-        mimeType: "audio/wav"
-      }}),
-      e('div', {{ style: {{ marginTop: '10px' }} }},
-        e('button', {{ onClick: this.startRecording, style: btnStyle }}, 'Bắt đầu 🎤'),
-        e('button', {{ onClick: this.stopRecording, style: btnStyle }}, 'Dừng ⏹')
-      ),
-      this.state.blobURL ? e('audio', {{ controls: true, src: this.state.blobURL, style: {{ marginTop: '10px', width: '100%' }} }}) : null
-    );
-  }}
-}}
+  return e("div", null,
+    e(ReactMic, {
+      record: record,
+      className: "sound-wave",
+      onStop: onStop,
+      strokeColor: "#000000",
+      backgroundColor: "#FF4081"
+    }),
+    e("br"),
+    e("button", { onClick: () => setRecord(true) }, "Bắt đầu ghi"),
+    e("button", { onClick: () => setRecord(false) }, "Dừng ghi")
+  );
+}
 
-const btnStyle = {{
-  backgroundColor: '#FF4081',
-  color: 'white',
-  border: 'none',
-  padding: '10px 20px',
-  margin: '5px',
-  borderRadius: '5px',
-  cursor: 'pointer',
-  fontSize: '16px'
-}};
-
-ReactDOM.render(e(Recorder), document.getElementById('root'));
+ReactDOM.render(e(App), document.getElementById('root'));
 </script>
-"""
-
-components.html(react_mic_html, height=600)
+""", height=400)
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
