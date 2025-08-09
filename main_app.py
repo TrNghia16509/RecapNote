@@ -41,7 +41,7 @@ b2_api.authorize_account("production", os.getenv("B2_APPLICATION_KEY_ID"), os.ge
 bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app/login/callback")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app")
 
 #================ Khởi tạo session_state ================
 if "recording" not in st.session_state:
@@ -151,7 +151,7 @@ with col2:
     
 # ================== Google OAuth Callback ==================
 query_params = st.query_params
-if "code" in query_params:
+if "code" in query_params and not st.session_state.get("logged_in", False):
     code = query_params["code"]
 
     token_url = "https://oauth2.googleapis.com/token"
@@ -185,7 +185,7 @@ if "code" in query_params:
             conn.commit()
 
         st.success(f"✅ Đăng nhập Google thành công! Xin chào {st.session_state.username}")
-        st.rerun()
+        st.experimental_rerun()
     else:
         st.error("❌ Không lấy được access token từ Google.")
         
@@ -208,7 +208,7 @@ def login():
     google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
         "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "redirect_uri": GOOGLE_REDIRECT_URI,  # URL gốc của app
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "offline",
