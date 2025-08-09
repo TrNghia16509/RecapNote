@@ -293,54 +293,104 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-class AudioProcessor(AudioProcessorBase):
-    def __init__(self) -> None:
-        self.audio_frames = []
+st.markdown("""
+<style>
+    .recorder-buttons {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .recorder-buttons button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .record { background-color: #fff; color: red; border: 2px solid red; }
+    .pause, .stop { background-color: #eee; color: gray; }
+    .upload { background-color: red; color: white; }
+    .delete { background-color: white; color: red; border: 2px solid red; }
+</style>
 
-    def recv_audio(self, frame: av.AudioFrame) -> av.AudioFrame:
-        pcm = frame.to_ndarray()
-        if pcm.ndim > 1:
-            pcm = pcm.mean(axis=1)
-        pcm = pcm.astype(np.int16)
-        self.audio_frames.append(pcm)
-        return frame
+<div class="recorder-buttons">
+    <button class="record" id="recordBtn">🎙 Ghi âm</button>
+    <button class="pause" id="pauseBtn" disabled>⏸ Tạm dừng</button>
+    <button class="stop" id="stopBtn" disabled>⏹ Hoàn thành</button>
+    <button class="upload" id="uploadBtn" disabled>⬆ Tải file</button>
+    <button class="delete" id="deleteBtn" disabled>🗑 Xóa file</button>
+</div>
+<audio id="player" controls></audio>
 
-st.header("🎙 Ghi âm trực tiếp bằng mic")
+<script>
+let mediaRecorder;
+let chunks = [];
+let audioBlob;
 
-webrtc_ctx = webrtc_streamer(
-    key="recorder",
-    mode=WebRtcMode.SENDONLY,
-    audio_processor_factory=AudioProcessor,
-    media_stream_constraints={"audio": True, "video": False},
-)
+const recordBtn = document.getElementById('recordBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const stopBtn = document.getElementById('stopBtn');
+const uploadBtn = document.getElementById('uploadBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const player = document.getElementById('player');
 
-if st.button("⏹ Dừng và gửi"):
-    if webrtc_ctx.audio_processor and webrtc_ctx.audio_processor.audio_frames:
-        st.info(f"📦 Số frame thu được: {len(webrtc_ctx.audio_processor.audio_frames)}")
+recordBtn.onclick = async () => {
+    chunks = [];
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+        audioBlob = new Blob(chunks, { type: 'audio/wav' });
+        player.src = URL.createObjectURL(audioBlob);
+        uploadBtn.disabled = false;
+        deleteBtn.disabled = false;
+    };
+    mediaRecorder.start();
+    recordBtn.disabled = true;
+    pauseBtn.disabled = false;
+    stopBtn.disabled = false;
+};
 
-        audio_data = np.concatenate(webrtc_ctx.audio_processor.audio_frames)
-        wav_bytes = BytesIO()
-        with wave.open(wav_bytes, 'wb') as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)  # 16-bit
-            wf.setframerate(44100)
-            wf.writeframes(audio_data.tobytes())
-        wav_bytes.seek(0)
+pauseBtn.onclick = () => {
+    if (mediaRecorder.state === "recording") {
+        mediaRecorder.pause();
+        pauseBtn.textContent = "▶ Tiếp tục";
+    } else {
+        mediaRecorder.resume();
+        pauseBtn.textContent = "⏸ Tạm dừng";
+    }
+};
 
-        # Phát lại bản ghi
-        st.audio(wav_bytes, format="audio/wav")
+stopBtn.onclick = () => {
+    mediaRecorder.stop();
+    recordBtn.disabled = false;
+    pauseBtn.disabled = true;
+    stopBtn.disabled = true;
+};
 
-        # Gửi file sang Flask API
-        files = {"file": ("recorded.wav", wav_bytes, "audio/wav")}
-        res = requests.post(f"{API_URL}/process_file", files=files, data={"language_code": "auto"})
-        if res.ok:
-            data = res.json()
-            st.success(f"📌 Chủ đề: {data['subject']}")
-            st.write(f"📝 {data['summary']}")
-        else:
-            st.error(f"Lỗi từ backend: {res.text}")
-    else:
-        st.error("⚠️ Không có âm thanh thu được. Kiểm tra quyền mic và thử lại.")
+uploadBtn.onclick = async () => {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recorded.wav");
+    const res = await fetch("https://flask-recapnote.onrender.com/process_file", {
+        method: "POST",
+        body: formData
+    });
+    if (res.ok) {
+        const data = await res.json();
+        alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
+    } else {
+        alert("❌ Lỗi upload");
+    }
+};
+
+deleteBtn.onclick = () => {
+    player.src = "";
+    audioBlob = null;
+    uploadBtn.disabled = true;
+    deleteBtn.disabled = true;
+};
+</script>
+""", unsafe_allow_html=True)
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
