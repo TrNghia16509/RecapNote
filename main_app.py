@@ -24,6 +24,7 @@ from b2sdk.v2 import InMemoryAccountInfo, B2Api
 import bcrypt
 from io import BytesIO
 import json
+from urllib.parse import urlencode
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -144,8 +145,48 @@ with col1:
     st.image("https://raw.githubusercontent.com/TrNghia16509/NoteBot/main/logo.png", width=150)
 with col2:
     st.title("RecapNote - Ứng dụng AI ghi nhớ và tóm tắt văn bản")
+    
+# ================== Google OAuth Callback ==================
+query_params = st.query_params
+if "code" in query_params:
+    code = query_params["code"]
 
-# ========= Sidebar: Đăng nhập / Đăng ký ========= 
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code"
+    }
+    token_res = requests.post(token_url, data=data)
+    token_json = token_res.json()
+    access_token = token_json.get("access_token")
+
+    if access_token:
+        user_info_res = requests.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        profile = user_info_res.json()
+
+        st.session_state.logged_in = True
+        st.session_state.profile = profile
+        st.session_state.username = profile.get("email", "google_user")
+
+        # Nếu user chưa có trong DB thì thêm
+        c.execute("SELECT * FROM users WHERE username=?", (st.session_state.username,))
+        if not c.fetchone():
+            c.execute("INSERT INTO users VALUES (?, ?, ?)",
+                      (st.session_state.username, b"", profile.get("email")))
+            conn.commit()
+
+        st.success(f"✅ Đăng nhập Google thành công! Xin chào {st.session_state.username}")
+        st.rerun()
+    else:
+        st.error("❌ Không lấy được access token từ Google.")
+        
+# ================== Login / Register ==================
 def login():
     st.subheader("🔐 Đăng nhập")
     u = st.text_input("Tên đăng nhập hoặc email")
@@ -160,21 +201,20 @@ def login():
         else:
             st.error("Sai tài khoản hoặc mật khẩu.")
 
-    # Đăng nhập bằng Google
-    if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
-        client_id = os.getenv("GOOGLE_CLIENT_ID")
-        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-        redirect_uri = "https://recapnote.up.railway.app/login/callback"
+    # Đăng nhập với Google
+    google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    auth_link = f"{google_auth_url}?{urlencode(params)}"
+    st.markdown(f"[🔐 Đăng nhập với Google]({auth_link})")
 
-        oauth = OAuth2Session(
-            client_id,
-            client_secret,
-            scope="openid email profile",
-            redirect_uri=redirect_uri
-        )
-        uri, state = oauth.create_authorization_url("https://accounts.google.com/o/oauth2/auth")
-        st.markdown(f"[Nhấn vào đây để đăng nhập bằng Google]({uri})")
-
+    # Quên mật khẩu
     if st.button("Quên mật khẩu?", key="forgot_btn"):
         email_reset = st.text_input("📧 Nhập email đã đăng ký")
         if email_reset:
@@ -199,10 +239,9 @@ def register():
             conn.commit()
             st.success("✅ Đăng ký thành công. Hãy đăng nhập.")
 
-# Sidebar
+# ================== Sidebar ==================
 with st.sidebar:
     st.markdown("## 🔑 Tài khoản")
-
     if st.session_state.get("logged_in", False):
         st.success(f"👋 Xin chào, **{st.session_state.username}**")
         if st.button("🚪 Đăng xuất", key="logout_btn"):
