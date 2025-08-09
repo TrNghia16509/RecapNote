@@ -293,7 +293,7 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-lass AudioProcessor(AudioProcessorBase):
+class AudioProcessor(AudioProcessorBase):
     def __init__(self) -> None:
         self.audio_frames = []
 
