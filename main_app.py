@@ -392,7 +392,7 @@ if file:
 if st.session_state.logged_in:
     st.subheader("📂 Ghi chú đã lưu")
     rows = c.execute(
-        "SELECT title, summary, timestamp, json_file FROM notes WHERE username=?",
+        "SELECT title, summary, timestamp, json_url FROM notes WHERE username=?",
         (st.session_state.username,)
     ).fetchall()
 
