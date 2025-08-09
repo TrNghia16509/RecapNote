@@ -298,15 +298,14 @@ class AudioProcessor(AudioProcessorBase):
         self.audio_frames = []
 
     def recv_audio(self, frame: av.AudioFrame) -> av.AudioFrame:
-        # Ép mono và 16-bit
         pcm = frame.to_ndarray()
-        if pcm.ndim > 1:  # stereo -> mono
+        if pcm.ndim > 1:
             pcm = pcm.mean(axis=1)
         pcm = pcm.astype(np.int16)
         self.audio_frames.append(pcm)
         return frame
 
-st.header("🎙 Ghi âm trực tiếp")
+st.header("🎙 Ghi âm trực tiếp bằng mic")
 
 webrtc_ctx = webrtc_streamer(
     key="recorder",
@@ -315,16 +314,14 @@ webrtc_ctx = webrtc_streamer(
     media_stream_constraints={"audio": True, "video": False},
 )
 
-# Reset dữ liệu khi bắt đầu ghi mới
-if webrtc_ctx.audio_processor:
-    webrtc_ctx.audio_processor.audio_frames = []
-
-if st.button("⏹ Dừng và lưu"):
+if st.button("⏹ Dừng và gửi"):
     if webrtc_ctx.audio_processor and webrtc_ctx.audio_processor.audio_frames:
+        st.info(f"📦 Số frame thu được: {len(webrtc_ctx.audio_processor.audio_frames)}")
+
         audio_data = np.concatenate(webrtc_ctx.audio_processor.audio_frames)
         wav_bytes = BytesIO()
         with wave.open(wav_bytes, 'wb') as wf:
-            wf.setnchannels(1)  # mono
+            wf.setnchannels(1)
             wf.setsampwidth(2)  # 16-bit
             wf.setframerate(44100)
             wf.writeframes(audio_data.tobytes())
@@ -333,7 +330,7 @@ if st.button("⏹ Dừng và lưu"):
         # Phát lại bản ghi
         st.audio(wav_bytes, format="audio/wav")
 
-        # Gửi file sang Flask API xử lý
+        # Gửi file sang Flask API
         files = {"file": ("recorded.wav", wav_bytes, "audio/wav")}
         res = requests.post(f"{API_URL}/process_file", files=files, data={"language_code": "auto"})
         if res.ok:
@@ -341,9 +338,9 @@ if st.button("⏹ Dừng và lưu"):
             st.success(f"📌 Chủ đề: {data['subject']}")
             st.write(f"📝 {data['summary']}")
         else:
-            st.error(f"Lỗi: {res.text}")
+            st.error(f"Lỗi từ backend: {res.text}")
     else:
-        st.error("⚠️ Không có dữ liệu âm thanh nào được ghi. Hãy đảm bảo mic đã bật và thử lại.")
+        st.error("⚠️ Không có âm thanh thu được. Kiểm tra quyền mic và thử lại.")
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
