@@ -27,7 +27,7 @@ import json
 from urllib.parse import urlencode
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
 import av
-from st_react_mic import st_react_mic
+#from st_react_mic import st_react_mic
 import streamlit.components.v1 as components
 
 # ========= Cấu hình =========
