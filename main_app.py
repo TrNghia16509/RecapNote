@@ -373,34 +373,51 @@ if file:
         st.session_state.chat.append({"role": "assistant", "content": r.text})
                 
     if st.session_state.logged_in:
-        if st.button("💾 Lưu ghi chú"):
-            c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
-                st.session_state.username,
-                data["subject"],
-                data["subject"],
-                data["summary"],
-                data["json_url"],
-                datetime.now().isoformat()
-            ))
-            conn.commit()
-            st.success("Đã lưu!")
-    else:
-        st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
+            if st.button("💾 Lưu ghi chú"):
+                json_file_name = data["json_url"].split("/")[-2] + "/" + data["json_url"].split("/")[-1]
+                c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
+                    st.session_state.username,
+                    data["subject"],
+                    data["subject"],
+                    data["summary"],
+                    json_file_name,  # chỉ lưu tên file
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+                st.success("Đã lưu!")
+        else:
+            st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
+else:
+    st.error(f"Lỗi: {res.text}")
 
 # ========= Hiển thị ghi chú =========
 if st.session_state.logged_in:
     st.subheader("📂 Ghi chú đã lưu")
     rows = c.execute(
-        "SELECT title, summary, timestamp, json_url FROM notes WHERE username=?",
+        "SELECT title, summary, timestamp, json_file FROM notes WHERE username=?",
         (st.session_state.username,)
     ).fetchall()
+
     for r in rows:
         with st.expander(f"📝 {r[0]} ({r[2][:10]})"):
             st.markdown(f"**Tóm tắt:** {r[1]}")
-            if st.button("📥 Xem chi tiết", key=r[3]):
-                json_data = requests.get(r[3]).json()
-                st.text_area("📄 Nội dung", json_data["full_text"], height=300)
-                st.markdown(f"[Tải file gốc]({json_data['file_url']})")
+            if r[3]:
+                if st.button("📥 Xem chi tiết", key=f"view_{r[0]}_{r[2]}"):
+                    try:
+                        # Gọi backend xin signed URL mới cho JSON
+                        resp = requests.get(f"{API_URL}/get_note_json", params={"json_file": r[3]})
+                        if resp.status_code == 200:
+                            json_url = resp.json()["signed_url"]
+                            json_data = requests.get(json_url).json()
+                            st.text_area("📄 Nội dung", json_data.get("full_text", ""), height=300)
+                            if json_data.get("file_url"):
+                                st.markdown(f"[📂 Tải file gốc]({json_data['file_url']})")
+                        else:
+                            st.error("Không lấy được link JSON từ backend.")
+                    except Exception as e:
+                        st.error(f"❌ Lỗi tải file JSON: {e}")
+            else:
+                st.warning("⚠️ Ghi chú này chưa có file JSON.")
 # ============ Chạy ==================
 port = int(os.environ.get("PORT", 8501))
 
