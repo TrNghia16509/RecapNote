@@ -29,6 +29,7 @@ from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
 import av
 #from st_react_mic import st_react_mic
 import streamlit.components.v1 as components
+import base64
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -297,59 +298,25 @@ selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 # ========== Ghi âm (frontend) ==========
 st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
-components.html("""
-<div id="root"></div>
+# 1. Khai báo component
+build_dir = os.path.join(os.path.dirname(__file__), "st_react_mic", "frontend", "build")
+st_react_mic = components.declare_component("st_react_mic", path=build_dir)
 
-<!-- React & ReactDOM -->
-<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+# 2. Hiển thị component
+audio_base64 = st_react_mic(key="mic1")
 
-<!-- React-Mic -->
-<script src="https://unpkg.com/react-mic/dist/react-mic.min.js"></script>
+# 3. Xử lý khi có dữ liệu âm thanh
+if audio_base64:
+    # Base64 dạng data URL, cần tách phần sau "base64,"
+    header, encoded = audio_base64.split(",", 1)
+    audio_bytes = base64.b64decode(encoded)
 
-<script type="text/javascript">
-window.onload = function() {
-    const e = React.createElement;
-    const { ReactMic } = window;
+    # Lưu file WAV tạm
+    with open("recorded.wav", "wb") as f:
+        f.write(audio_bytes)
 
-    function App() {
-      const [record, setRecord] = React.useState(false);
-
-      const onStop = (recordedBlob) => {
-        console.log('recordedBlob is: ', recordedBlob);
-        const formData = new FormData();
-        formData.append("file", recordedBlob.blob, "recorded.wav");
-
-        fetch("https://flask-recapnote.onrender.com/process_file", {
-          method: "POST",
-          body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-          alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-        })
-        .catch(err => console.error(err));
-      };
-
-      return e("div", null,
-        e(ReactMic, {
-          record: record,
-          className: "sound-wave",
-          onStop: onStop,
-          strokeColor: "#000000",
-          backgroundColor: "#FF4081"
-        }),
-        e("br"),
-        e("button", { onClick: () => setRecord(true) }, "Bắt đầu ghi"),
-        e("button", { onClick: () => setRecord(false) }, "Dừng ghi")
-      );
-    }
-
-    ReactDOM.render(e(App), document.getElementById('root'));
-};
-</script>
-""", height=500, scrolling=True)
-
+    st.audio(audio_bytes, format="audio/wav")
+    st.success("🎉 Ghi âm xong và gửi sang Python thành công!")
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
 
