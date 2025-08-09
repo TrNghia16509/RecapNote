@@ -41,7 +41,7 @@ b2_api.authorize_account("production", os.getenv("B2_APPLICATION_KEY_ID"), os.ge
 bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app/login/callback")
 
 #================ Khởi tạo session_state ================
 if "recording" not in st.session_state:
