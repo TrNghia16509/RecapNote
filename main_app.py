@@ -185,7 +185,7 @@ if "code" in query_params and not st.session_state.get("logged_in", False):
             conn.commit()
 
         st.success(f"✅ Đăng nhập Google thành công! Xin chào {st.session_state.username}")
-        st.experimental_rerun()
+        st.rerun()
     else:
         st.error("❌ Không lấy được access token từ Google.")
         
