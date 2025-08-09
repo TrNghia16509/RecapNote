@@ -299,8 +299,8 @@ selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
 # 1. Khai báo component
-build_dir = os.path.join(os.path.dirname(__file__), "st_react_mic", "frontend", "build")
-st_react_mic = components.declare_component("st_react_mic", path=build_dir)
+_component_dir = os.path.join(os.path.dirname(__file__), "st_react_mic", "frontend", "build")
+st_react_mic = components.declare_component("st_react_mic", path=_component_dir)
 
 # 2. Hiển thị component
 audio_base64 = st_react_mic(key="mic1")
