@@ -127,72 +127,75 @@ with col2:
 
 # ========= Sidebar: Đăng nhập / Đăng ký ========= 
 def login():
-    with st.sidebar:
-        st.subheader("🔐 Đăng nhập")
-        u = st.text_input("Tên đăng nhập hoặc email")
-        p = st.text_input("Mật khẩu", type="password")
-        if st.button("Đăng nhập", key="login_btn"):
-            row = c.execute("SELECT * FROM users WHERE (username=? OR email=?)", (u, u)).fetchone()
-            if row and bcrypt.checkpw(p.encode('utf-8'), row[1]):
-                st.session_state.logged_in = True
-                st.session_state.username = row[0]
-                st.success("✅ Đăng nhập thành công!")
+    st.subheader("🔐 Đăng nhập")
+    u = st.text_input("Tên đăng nhập hoặc email")
+    p = st.text_input("Mật khẩu", type="password")
+    if st.button("Đăng nhập", key="login_btn"):
+        row = c.execute("SELECT * FROM users WHERE (username=? OR email=?)", (u, u)).fetchone()
+        if row and bcrypt.checkpw(p.encode('utf-8'), row[1]):
+            st.session_state.logged_in = True
+            st.session_state.username = row[0]
+            st.success("✅ Đăng nhập thành công!")
+            st.experimental_rerun()
+        else:
+            st.error("Sai tài khoản hoặc mật khẩu.")
+
+    # Đăng nhập bằng Google
+    if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        redirect_uri = "https://recapnote.up.railway.app/login/callback"
+
+        oauth = OAuth2Session(
+            client_id,
+            client_secret,
+            scope="openid email profile",
+            redirect_uri=redirect_uri
+        )
+        uri, state = oauth.create_authorization_url("https://accounts.google.com/o/oauth2/auth")
+        st.markdown(f"[Nhấn vào đây để đăng nhập bằng Google]({uri})")
+
+    if st.button("Quên mật khẩu?", key="forgot_btn"):
+        email_reset = st.text_input("📧 Nhập email đã đăng ký")
+        if email_reset:
+            row = c.execute("SELECT username FROM users WHERE email=?", (email_reset,)).fetchone()
+            if row:
+                send_reset_email(email_reset, row[0])
             else:
-                st.error("Sai tài khoản hoặc mật khẩu.")
-        # Đăng nhập bằng Google
-        if st.button("🔐 Đăng nhập với Google", key="google_login_btn"):
-            client_id = os.getenv("GOOGLE_CLIENT_ID")
-            client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-            redirect_uri = "https://recapnote.up.railway.app/login/callback"
-
-            oauth = OAuth2Session(
-                client_id,
-                client_secret,
-                scope="openid email profile",
-                redirect_uri=redirect_uri
-            )
-            uri, state = oauth.create_authorization_url("https://accounts.google.com/o/oauth2/auth")
-            st.markdown(f"[Nhấn vào đây để đăng nhập bằng Google]({uri})")
-
-        if st.button("Quên mật khẩu?", key="forgot_btn"):
-            email_reset = st.text_input("📧 Nhập email đã đăng ký")
-            if email_reset:
-                row = c.execute("SELECT username FROM users WHERE email=?", (email_reset,)).fetchone()
-                if row:
-                    send_reset_email(email_reset, row[0])
-                else:
-                    st.error("❌ Không tìm thấy email trong hệ thống.")
+                st.error("❌ Không tìm thấy email trong hệ thống.")
 
 def register():
-    with st.sidebar:
-        st.subheader("🆕 Đăng ký")
-        new_user = st.text_input("Tên đăng nhập mới")
-        email = st.text_input("Email")
-        pw1 = st.text_input("Mật khẩu", type="password")
-        pw2 = st.text_input("Xác nhận mật khẩu", type="password")
-        if st.button("Đăng ký", key="register_btn"):
-            if pw1 != pw2:
-                st.warning("❌ Mật khẩu không khớp.")
-            else:
-                hashed_pw = bcrypt.hashpw(pw1.encode('utf-8'), bcrypt.gensalt())
-                c.execute("INSERT INTO users VALUES (?, ?, ?)", (new_user, hashed_pw, email))
-                conn.commit()
-                st.success("✅ Đăng ký thành công. Hãy đăng nhập.")
+    st.subheader("🆕 Đăng ký")
+    new_user = st.text_input("Tên đăng nhập mới")
+    email = st.text_input("Email")
+    pw1 = st.text_input("Mật khẩu", type="password")
+    pw2 = st.text_input("Xác nhận mật khẩu", type="password")
+    if st.button("Đăng ký", key="register_btn"):
+        if pw1 != pw2:
+            st.warning("❌ Mật khẩu không khớp.")
+        else:
+            hashed_pw = bcrypt.hashpw(pw1.encode('utf-8'), bcrypt.gensalt())
+            c.execute("INSERT INTO users VALUES (?, ?, ?)", (new_user, hashed_pw, email))
+            conn.commit()
+            st.success("✅ Đăng ký thành công. Hãy đăng nhập.")
 
+# Sidebar
 with st.sidebar:
     st.markdown("## 🔑 Tài khoản")
-    menu = st.radio("Chọn chức năng", ["Đăng nhập", "Đăng ký"])
-    if menu == "Đăng nhập":
-        login()
-    else:
-        register()
 
-    if st.session_state.logged_in or st.session_state.profile:
+    if st.session_state.get("logged_in", False):
+        st.success(f"👋 Xin chào, **{st.session_state.username}**")
         if st.button("🚪 Đăng xuất", key="logout_btn"):
             st.session_state.logged_in = False
             st.session_state.profile = None
-            st.success("✅ Đã đăng xuất.")
-
+            st.experimental_rerun()
+    else:
+        menu = st.radio("Chọn chức năng", ["Đăng nhập", "Đăng ký"])
+        if menu == "Đăng nhập":
+            login()
+        else:
+            register()
+            
 # ========= Hướng dẫn sử dụng =========
 with st.expander("📘 Hướng dẫn sử dụng"):
     st.markdown("""
