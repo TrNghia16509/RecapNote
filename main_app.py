@@ -331,7 +331,7 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-st.header("📤 Tải file / ghi âm để xử lý")
+st.header("📤 Tải file để xử lý")
 file = st.file_uploader("Chọn file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
 
 if file:
