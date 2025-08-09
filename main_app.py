@@ -295,74 +295,80 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-API_URL = "https://flask-recapnote.onrender.com/process_file"  # đổi nếu API khác
+API_URL = "https://flask-recapnote.onrender.com/process_file"  # đổi URL nếu cần
 
 st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
 react_mic_html = f"""
-<div id="root"></div>
+<div id="root" style="background-color:#222;padding:10px;border-radius:10px;color:white;max-width:500px;">
+  <h3>🎙 React-Mic Recorder</h3>
+</div>
 
+<!-- React + ReactDOM -->
 <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+<!-- React-Mic -->
 <script src="https://unpkg.com/react-mic/dist/react-mic.min.js"></script>
 
 <script>
-  const {{ ReactMic }} = window;
+const {{ React, ReactDOM }} = window;
+const ReactMic = window['react-mic'].ReactMic;
 
-  class Recorder extends React.Component {{
-    constructor(props) {{
-      super(props);
-      this.state = {{ record: false, blobURL: null }};
-    }}
-
-    startRecording = () => {{
-      this.setState({{ record: true }});
-    }};
-
-    stopRecording = () => {{
-      this.setState({{ record: false }});
-    }};
-
-    onStop = (recordedBlob) => {{
-      this.setState({{ blobURL: URL.createObjectURL(recordedBlob.blob) }});
-      
-      // Gửi file sang Flask API
-      const formData = new FormData();
-      formData.append("file", recordedBlob.blob, "recorded.wav");
-      formData.append("language_code", "auto");
-
-      fetch("{API_URL}", {{
-        method: "POST",
-        body: formData
-      }})
-      .then(res => res.json())
-      .then(data => {{
-        alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-      }})
-      .catch(err => {{
-        alert("❌ Lỗi khi gửi file: " + err);
-      }});
-    }};
-
-    render() {{
-      return (
-        React.createElement('div', null,
-          React.createElement(ReactMic, {{
-            record: this.state.record,
-            onStop: this.onStop,
-            strokeColor: '#000000',
-            backgroundColor: '#FF4081'
-          }}),
-          React.createElement('br'),
-          React.createElement('button', {{ onClick: this.startRecording }}, 'Bắt đầu ghi'),
-          React.createElement('button', {{ onClick: this.stopRecording }}, 'Dừng ghi'),
-          this.state.blobURL ? React.createElement('audio', {{ controls: true, src: this.state.blobURL }}) : null
-        )
-      );
-    }}
+class Recorder extends React.Component {{
+  constructor(props) {{
+    super(props);
+    this.state = {{ record: false, blobURL: null }};
   }}
 
-  ReactDOM.render(React.createElement(Recorder), document.getElementById('root'));
+  startRecording = () => {{
+    this.setState({{ record: true }});
+  }}
+
+  stopRecording = () => {{
+    this.setState({{ record: false }});
+  }}
+
+  onStop = (recordedBlob) => {{
+    console.log('Recorded blob', recordedBlob);
+    this.setState({{ blobURL: URL.createObjectURL(recordedBlob.blob) }});
+
+    const formData = new FormData();
+    formData.append("file", recordedBlob.blob, "recorded.wav");
+    formData.append("language_code", "auto");
+
+    fetch("{API_URL}", {{
+      method: "POST",
+      body: formData
+    }})
+    .then(res => res.json())
+    .then(data => {{
+      alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
+    }})
+    .catch(err => {{
+      alert("❌ Lỗi khi gửi file: " + err);
+    }});
+  }}
+
+  render() {{
+    return (
+      React.createElement('div', {{ style: {{ textAlign: 'center' }} }},
+        React.createElement(ReactMic, {{
+          record: this.state.record,
+          className: "sound-wave",
+          onStop: this.onStop,
+          strokeColor: "#FF4081",
+          backgroundColor: "#000"
+        }}),
+        React.createElement('br'),
+        React.createElement('button', {{ onClick: this.startRecording, style: {{marginRight:"10px"}} }}, 'Bắt đầu'),
+        React.createElement('button', {{ onClick: this.stopRecording }}, 'Dừng'),
+        this.state.blobURL ? React.createElement('audio', {{ controls: true, src: this.state.blobURL, style: {{marginTop:"10px"}} }}) : null
+      )
+    );
+  }}
+}}
+
+ReactDOM.render(React.createElement(Recorder), document.getElementById('root'));
 </script>
 """
 
