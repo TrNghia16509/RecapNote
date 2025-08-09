@@ -7,19 +7,30 @@ const MyMic = ({ onStop }) => {
   const startRecording = () => setRecord(true);
   const stopRecording = () => setRecord(false);
 
+  const handleStop = (recordedBlob) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(recordedBlob.blob);
+    reader.onloadend = () => {
+      const base64data = reader.result;
+      // Gửi về Streamlit
+      window.parent.postMessage({ type: "streamlit:setComponentValue", value: base64data }, "*");
+    };
+    if (onStop) onStop(recordedBlob);
+  };
+
   return (
     <div style={{ textAlign: "center" }}>
       <ReactMic
         record={record}
         className="sound-wave"
-        onStop={onStop}
+        onStop={handleStop}
         strokeColor="#000000"
         backgroundColor="#FF4081"
-        mimeType="audio/wav"
       />
-      <br />
-      <button onClick={startRecording} disabled={record}>🎙 Bắt đầu</button>
-      <button onClick={stopRecording} disabled={!record}>⏹ Dừng</button>
+      <div style={{ marginTop: "10px" }}>
+        <button onClick={startRecording}>🎙 Bắt đầu</button>
+        <button onClick={stopRecording}>⏹ Dừng</button>
+      </div>
     </div>
   );
 };
