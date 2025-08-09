@@ -111,10 +111,30 @@ RecapNote""")
 # ========= Cơ sở dữ liệu =========
 conn = sqlite3.connect("notes.db", check_same_thread=False)
 c = conn.cursor()
+
+# Bảng users
 c.execute('''CREATE TABLE IF NOT EXISTS users (
-    username TEXT PRIMARY KEY, password TEXT, email TEXT)''')
+    username TEXT PRIMARY KEY, 
+    password TEXT, 
+    email TEXT
+)''')
+
+# Bảng notes có json_url
 c.execute('''CREATE TABLE IF NOT EXISTS notes (
-    username TEXT, title TEXT, subject TEXT, summary TEXT, content TEXT, timestamp TEXT, note TEXT)''')
+    username TEXT, 
+    title TEXT, 
+    subject TEXT, 
+    summary TEXT, 
+    json_url TEXT, 
+    timestamp TEXT
+)''')
+
+# Nếu DB cũ thiếu cột json_url thì thêm
+try:
+    c.execute("ALTER TABLE notes ADD COLUMN json_url TEXT")
+except sqlite3.OperationalError:
+    pass  # Cột đã tồn tại
+
 conn.commit()
 
 # ========= Tiêu đề và logo =========
