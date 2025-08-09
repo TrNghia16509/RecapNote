@@ -16,4 +16,3 @@ bcrypt
 b2sdk
 streamlit-webrtc
 av
-react-mic
