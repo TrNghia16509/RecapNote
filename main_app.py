@@ -309,7 +309,6 @@ st.markdown("""
     }
     .record { background-color: #fff; color: red; border: 2px solid red; }
     .pause, .stop { background-color: #eee; color: gray; }
-    .upload { background-color: red; color: white; }
     .delete { background-color: white; color: red; border: 2px solid red; }
 </style>
 
@@ -317,7 +316,6 @@ st.markdown("""
     <button class="record" id="recordBtn">🎙 Ghi âm</button>
     <button class="pause" id="pauseBtn" disabled>⏸ Tạm dừng</button>
     <button class="stop" id="stopBtn" disabled>⏹ Hoàn thành</button>
-    <button class="upload" id="uploadBtn" disabled>⬆ Tải file</button>
     <button class="delete" id="deleteBtn" disabled>🗑 Xóa file</button>
 </div>
 <audio id="player" controls></audio>
@@ -330,7 +328,6 @@ let audioBlob;
 const recordBtn = document.getElementById('recordBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const stopBtn = document.getElementById('stopBtn');
-const uploadBtn = document.getElementById('uploadBtn');
 const deleteBtn = document.getElementById('deleteBtn');
 const player = document.getElementById('player');
 
@@ -366,21 +363,6 @@ stopBtn.onclick = () => {
     recordBtn.disabled = false;
     pauseBtn.disabled = true;
     stopBtn.disabled = true;
-};
-
-uploadBtn.onclick = async () => {
-    const formData = new FormData();
-    formData.append("file", audioBlob, "recorded.wav");
-    const res = await fetch("https://flask-recapnote.onrender.com/process_file", {
-        method: "POST",
-        body: formData
-    });
-    if (res.ok) {
-        const data = await res.json();
-        alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-    } else {
-        alert("❌ Lỗi upload");
-    }
 };
 
 deleteBtn.onclick = () => {
