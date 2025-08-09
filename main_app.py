@@ -136,7 +136,7 @@ def login():
             st.session_state.logged_in = True
             st.session_state.username = row[0]
             st.success("✅ Đăng nhập thành công!")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Sai tài khoản hoặc mật khẩu.")
 
@@ -188,7 +188,7 @@ with st.sidebar:
         if st.button("🚪 Đăng xuất", key="logout_btn"):
             st.session_state.logged_in = False
             st.session_state.profile = None
-            st.experimental_rerun()
+            st.rerun()
     else:
         menu = st.radio("Chọn chức năng", ["Đăng nhập", "Đăng ký"])
         if menu == "Đăng nhập":
