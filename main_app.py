@@ -358,9 +358,9 @@ if file:
         # Chatbot
         st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
         if "chat" not in st.session_state:
-        st.session_state.chat = []
+            st.session_state.chat = []
         for msg in st.session_state.chat:
-        st.chat_message(msg["role"]).write(msg["content"])
+            st.chat_message(msg["role"]).write(msg["content"])
         q = st.chat_input("Nhập câu hỏi...")
         if q:
             st.chat_message("user").write(q)
