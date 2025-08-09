@@ -293,63 +293,76 @@ selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 # ========== Ghi âm (frontend) ==========
 st.markdown("## 🎙 Ghi âm trực tiếp bằng trình duyệt")
 
-# Giao diện HTML + JavaScript ghi âm
-st.markdown("""
+API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
+
+st.markdown(f"""
 <style>
-    button {
+    button {{
         margin-right: 10px;
-    }
+    }}
 </style>
 
 <button id="recordButton">🎙 Bắt đầu ghi âm</button>
 <button id="stopButton" disabled>⏹ Dừng ghi</button>
 <audio id="audioPlayback" controls></audio>
+
 <script>
 let mediaRecorder;
 let audioChunks = [];
-let startTime;
 
 const recordButton = document.getElementById("recordButton");
 const stopButton = document.getElementById("stopButton");
 const audioPlayback = document.getElementById("audioPlayback");
 
-recordButton.onclick = async function() {
+recordButton.onclick = async function() {{
     audioChunks = [];
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
+    try {{
+        const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
+        mediaRecorder = new MediaRecorder(stream, {{ mimeType: 'audio/webm' }});
 
-    mediaRecorder.ondataavailable = event => {
-        audioChunks.push(event.data);
-    };
+        mediaRecorder.ondataavailable = event => {{
+            if (event.data.size > 0) {{
+                audioChunks.push(event.data);
+            }}
+        }};
 
-    mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioPlayback.src = audioUrl;
+        mediaRecorder.onstop = async () => {{
+            const audioBlob = new Blob(audioChunks, {{ type: 'audio/webm' }});
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioPlayback.src = audioUrl;
 
-        const formData = new FormData();
-        formData.append("file", audioBlob, "recorded.wav");
+            const formData = new FormData();
+            formData.append("file", audioBlob, "recorded.webm");
+            formData.append("language_code", "auto");
 
-        const response = await fetch("https://flask-recapnote.onrender.com", {
-            method: "POST",
-            body: formData
-        });
+            const response = await fetch("{API_URL}/process_file", {{
+                method: "POST",
+                body: formData
+            }});
 
-        const result = await response.json();
-        alert("📌 Chủ đề: " + result.subject + "\n📝 Tóm tắt: " + result.summary);
-    };
+            if (!response.ok) {{
+                alert("❌ Lỗi xử lý file!");
+                return;
+            }}
 
-    mediaRecorder.start();
-    recordButton.disabled = true;
-    stopButton.disabled = false;
-    startTime = Date.now();
-};
+            const result = await response.json();
+            alert("📌 Chủ đề: " + result.subject + "\\n📝 Tóm tắt: " + result.summary);
+        }};
 
-stopButton.onclick = function() {
+        mediaRecorder.start();
+        recordButton.disabled = true;
+        stopButton.disabled = false;
+
+    }} catch (err) {{
+        alert("❌ Không thể truy cập micro: " + err);
+    }}
+}};
+
+stopButton.onclick = function() {{
     mediaRecorder.stop();
     recordButton.disabled = false;
     stopButton.disabled = true;
-};
+}};
 </script>
 """, unsafe_allow_html=True)
 
