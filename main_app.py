@@ -299,50 +299,56 @@ st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
 components.html("""
 <div id="root"></div>
-<script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/react-mic/dist/react-mic.js"></script>
 
-<script>
-const e = React.createElement;
-const { ReactMic } = window;
+<!-- React & ReactDOM -->
+<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
 
-function App() {
-  const [record, setRecord] = React.useState(false);
+<!-- React-Mic -->
+<script src="https://unpkg.com/react-mic/dist/react-mic.min.js"></script>
 
-  const onStop = (recordedBlob) => {
-    console.log('recordedBlob is: ', recordedBlob);
-    const formData = new FormData();
-    formData.append("file", recordedBlob.blob, "recorded.wav");
+<script type="text/javascript">
+window.onload = function() {
+    const e = React.createElement;
+    const { ReactMic } = window;
 
-    fetch("https://flask-recapnote.onrender.com/process_file", {
-      method: "POST",
-      body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-      alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
-    })
-    .catch(err => console.error(err));
-  };
+    function App() {
+      const [record, setRecord] = React.useState(false);
 
-  return e("div", null,
-    e(ReactMic, {
-      record: record,
-      className: "sound-wave",
-      onStop: onStop,
-      strokeColor: "#000000",
-      backgroundColor: "#FF4081"
-    }),
-    e("br"),
-    e("button", { onClick: () => setRecord(true) }, "Bắt đầu ghi"),
-    e("button", { onClick: () => setRecord(false) }, "Dừng ghi")
-  );
-}
+      const onStop = (recordedBlob) => {
+        console.log('recordedBlob is: ', recordedBlob);
+        const formData = new FormData();
+        formData.append("file", recordedBlob.blob, "recorded.wav");
 
-ReactDOM.render(e(App), document.getElementById('root'));
+        fetch("https://flask-recapnote.onrender.com/process_file", {
+          method: "POST",
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          alert("📌 Chủ đề: " + data.subject + "\\n📝 Tóm tắt: " + data.summary);
+        })
+        .catch(err => console.error(err));
+      };
+
+      return e("div", null,
+        e(ReactMic, {
+          record: record,
+          className: "sound-wave",
+          onStop: onStop,
+          strokeColor: "#000000",
+          backgroundColor: "#FF4081"
+        }),
+        e("br"),
+        e("button", { onClick: () => setRecord(true) }, "Bắt đầu ghi"),
+        e("button", { onClick: () => setRecord(false) }, "Dừng ghi")
+      );
+    }
+
+    ReactDOM.render(e(App), document.getElementById('root'));
+};
 </script>
-""", height=400)
+""", height=500, scrolling=True)
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
