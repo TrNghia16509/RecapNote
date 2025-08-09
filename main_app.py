@@ -293,14 +293,17 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-class AudioProcessor(AudioProcessorBase):
+lass AudioProcessor(AudioProcessorBase):
     def __init__(self) -> None:
         self.audio_frames = []
 
     def recv_audio(self, frame: av.AudioFrame) -> av.AudioFrame:
-        # Lấy dữ liệu audio dạng numpy
-        audio_data = frame.to_ndarray()
-        self.audio_frames.append(audio_data)
+        # Ép mono và 16-bit
+        pcm = frame.to_ndarray()
+        if pcm.ndim > 1:  # stereo -> mono
+            pcm = pcm.mean(axis=1)
+        pcm = pcm.astype(np.int16)
+        self.audio_frames.append(pcm)
         return frame
 
 st.header("🎙 Ghi âm trực tiếp")
@@ -312,17 +315,22 @@ webrtc_ctx = webrtc_streamer(
     media_stream_constraints={"audio": True, "video": False},
 )
 
+# Reset dữ liệu khi bắt đầu ghi mới
+if webrtc_ctx.audio_processor:
+    webrtc_ctx.audio_processor.audio_frames = []
+
 if st.button("⏹ Dừng và lưu"):
-    if webrtc_ctx.audio_processor:
+    if webrtc_ctx.audio_processor and webrtc_ctx.audio_processor.audio_frames:
         audio_data = np.concatenate(webrtc_ctx.audio_processor.audio_frames)
         wav_bytes = BytesIO()
         with wave.open(wav_bytes, 'wb') as wf:
-            wf.setnchannels(1)
+            wf.setnchannels(1)  # mono
             wf.setsampwidth(2)  # 16-bit
             wf.setframerate(44100)
             wf.writeframes(audio_data.tobytes())
         wav_bytes.seek(0)
 
+        # Phát lại bản ghi
         st.audio(wav_bytes, format="audio/wav")
 
         # Gửi file sang Flask API xử lý
@@ -334,6 +342,8 @@ if st.button("⏹ Dừng và lưu"):
             st.write(f"📝 {data['summary']}")
         else:
             st.error(f"Lỗi: {res.text}")
+    else:
+        st.error("⚠️ Không có dữ liệu âm thanh nào được ghi. Hãy đảm bảo mic đã bật và thử lại.")
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
