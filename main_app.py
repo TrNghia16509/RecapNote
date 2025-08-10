@@ -326,13 +326,6 @@ st.title("🎙 Ghi âm")
 if "audio_bytes" not in st.session_state:
     st.session_state.audio_bytes = None
 
-# Chọn ngôn ngữ (ví dụ)
-selected_lang_code = st.selectbox(
-    "Ngôn ngữ",
-    options=["auto", "vi", "en", "ja"],
-    index=0
-)
-
 # Nếu chưa ghi âm → hiển thị nút ghi âm
 if st.session_state.audio_bytes is None:
     audio_bytes = audio_recorder(
