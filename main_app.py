@@ -300,7 +300,7 @@ st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
 st_react_mic = components.declare_component(
     "st_react_mic",
-    url="https://trnghia16509.github.io/st-react-mic-frontend/"
+    url="https://trnghia16509.github.io/st-react-mic-frontend"
 )
 
 audio_base64 = st_react_mic(key="mic1")
