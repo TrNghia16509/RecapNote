@@ -297,45 +297,64 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-st.set_page_config(page_title="🎙 RecapNote Recorder", page_icon="🎙")
+st.set_page_config(page_title="🎙 Ghi âm", page_icon="🎙")
+st.title("🎙 Ghi âm")
 
-st.title("🎙 Ghi âm & gửi tới Flask Backend")
+# Khởi tạo biến trong session_state
+if "audio_bytes" not in st.session_state:
+    st.session_state.audio_bytes = None
 
-audio_bytes = audio_recorder(
-    pause_threshold=2.0, 
-    sample_rate=44100, 
-    text="Nhấn để ghi âm"
+# Chọn ngôn ngữ (ví dụ)
+selected_lang_code = st.selectbox(
+    "Ngôn ngữ",
+    options=["auto", "vi", "en", "ja"],
+    index=0
 )
 
-if audio_bytes:
-    st.audio(audio_bytes, format="audio/wav")
-    
-    if st.button("📤 Gửi tới Flask xử lý"):
-        with st.spinner("Đang gửi file..."):
-            files = {
-                "file": ("recording.wav", audio_bytes, "audio/wav")
-            }
-            data = {
-                "language_code": "vi"  # hoặc "auto"
-            }
-            try:
-                res = requests.post(
-                    "https://flask-recapnote.onrender.com/process_file",
-                    files=files,
-                    data=data,
-                    timeout=120
-                )
-                if res.ok:
-                    result = res.json()
-                    st.success("✅ Kết quả từ backend")
-                    st.write("**Chủ đề:**", result["subject"])
-                    st.write("**Tóm tắt:**", result["summary"])
-                    st.write("**File gốc:**", result["file_url"])
-                    st.write("**JSON kết quả:**", result["json_url"])
-                else:
-                    st.error(f"Lỗi {res.status_code}: {res.text}")
-            except Exception as e:
-                st.error(f"Lỗi kết nối: {e}")
+# Nếu chưa ghi âm → hiển thị nút ghi âm
+if st.session_state.audio_bytes is None:
+    audio_bytes = audio_recorder(
+        pause_threshold=2.0,
+        sample_rate=44100,
+        text="Nhấn để ghi âm và nhấn lại lần nữa để dừng"
+    )
+    if audio_bytes:
+        st.session_state.audio_bytes = audio_bytes
+else:
+    # Nếu đã có bản ghi → hiển thị audio player + nút xóa
+    st.audio(st.session_state.audio_bytes, format="audio/wav")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("📤 Xử lý"):
+            with st.spinner("Đang gửi file..."):
+                files = {
+                    "file": ("recording.wav", st.session_state.audio_bytes, "audio/wav")
+                }
+                data = {
+                    "language_code": selected_lang_code
+                }
+                try:
+                    res = requests.post(
+                        "https://flask-recapnote.onrender.com/process_file",
+                        files=files,
+                        data=data,
+                        timeout=120
+                    )
+                    if res.ok:
+                        result = res.json()
+                        st.success("✅ Kết quả")
+                        st.write("**Chủ đề:**", result["subject"])
+                        st.write("**Tóm tắt:**", result["summary"])
+                    else:
+                        st.error(f"Lỗi {res.status_code}: {res.text}")
+                except Exception as e:
+                    st.error(f"Lỗi kết nối: {e}")
+
+    with col2:
+        if st.button("🗑 Xóa bản ghi"):
+            st.session_state.audio_bytes = None
+            st.rerun()
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
