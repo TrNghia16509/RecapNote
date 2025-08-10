@@ -16,3 +16,4 @@ bcrypt
 b2sdk
 streamlit-webrtc
 av
+audio-recorder-streamlit
