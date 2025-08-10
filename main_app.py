@@ -298,26 +298,16 @@ selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 # ========== Ghi âm (frontend) ==========
 st.subheader("🎙 Ghi âm trực tiếp bằng React-Mic")
 
-# 1. Khai báo component
-_component_dir = os.path.join(os.path.dirname(__file__), "st_react_mic", "frontend", "build")
-st_react_mic = components.declare_component("frontend", path=_component_dir)
-st.write("📂 Component path:", _component_dir, os.path.exists(_component_dir))
+st_react_mic = components.declare_component(
+    "st_react_mic",
+    url="https://trnghia16509.github.io/st-react-mic-frontend/"
+)
 
-# 2. Hiển thị component
 audio_base64 = st_react_mic(key="mic1")
 
-# 3. Xử lý khi có dữ liệu âm thanh
 if audio_base64:
-    # Base64 dạng data URL, cần tách phần sau "base64,"
-    header, encoded = audio_base64.split(",", 1)
-    audio_bytes = base64.b64decode(encoded)
-
-    # Lưu file WAV tạm
-    with open("recorded.wav", "wb") as f:
-        f.write(audio_bytes)
-
-    st.audio(audio_bytes, format="audio/wav")
-    st.success("🎉 Ghi âm xong và gửi sang Python thành công!")
+    st.audio(audio_base64, format="audio/wav")
+    st.success("🎉 Ghi âm xong!")
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
 
