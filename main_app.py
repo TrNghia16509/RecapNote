@@ -214,7 +214,7 @@ def login():
     google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
         "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": GOOGLE_REDIRECT_URI,  # URL gốc của app
+        "redirect_uri": GOOGLE_REDIRECT_URI,
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "offline",
@@ -222,28 +222,12 @@ def login():
     }
     auth_link = f"{google_auth_url}?{urlencode(params)}"
 
-    st.markdown(
-        f"""
-        <a href="{auth_link}">
-            <button style="
-                background-color: #4285F4;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                font-size: 16px;
-                border-radius: 5px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            ">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/4/4f/Google_%22G%22_Logo.svg" width="20">
-                Đăng nhập với Google
-            </button>
-        </a>
-        """,
-        unsafe_allow_html=True
-    )
+    # Nút vẫn là st.button, nhưng khi bấm sẽ chạy JS để chuyển trang
+    if st.button("Đăng nhập với Google"):
+        st.write(
+            f'<script>window.location.href="{auth_link}";</script>',
+            unsafe_allow_html=True
+        )
 
     # Quên mật khẩu
     if st.button("Quên mật khẩu?", key="forgot_btn"):
@@ -319,7 +303,6 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-st.set_page_config(page_title="🎙 Ghi âm", page_icon="🎙")
 st.title("🎙 Ghi âm")
 
 # Khởi tạo biến trong session_state
