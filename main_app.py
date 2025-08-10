@@ -213,21 +213,34 @@ def login():
     # Nút đăng nhập Google
     google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
-        "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "access_type": "offline",
-        "prompt": "consent"
+    "client_id": GOOGLE_CLIENT_ID,
+    "redirect_uri": GOOGLE_REDIRECT_URI,
+    "response_type": "code",
+    "scope": "openid email profile",
+    "access_type": "offline",
+    "prompt": "consent"
     }
     auth_link = f"{google_auth_url}?{urlencode(params)}"
 
-    # Nút vẫn là st.button, nhưng khi bấm sẽ chạy JS để chuyển trang
-    if st.button("Đăng nhập với Google"):
-        st.write(
-            f'<script>window.location.href="{auth_link}";</script>',
-            unsafe_allow_html=True
-        )
+    # CSS để style giống st.button
+    st.markdown(
+        f"""
+        <a href="{auth_link}" target="_self">
+            <button style="
+                background-color: #2e7efb;
+                color: white;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 0.25rem;
+                font-size: 1rem;
+                cursor: pointer;
+            ">
+                Đăng nhập với Google
+            </button>
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Quên mật khẩu
     if st.button("Quên mật khẩu?", key="forgot_btn"):
