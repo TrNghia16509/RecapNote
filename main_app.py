@@ -30,6 +30,7 @@ import av
 #from st_react_mic import st_react_mic
 import streamlit.components.v1 as components
 import base64
+from audio_recorder_streamlit import audio_recorder
 
 # ========= Cấu hình =========
 load_dotenv()
@@ -296,18 +297,46 @@ selected_lang_name = st.selectbox("Select language", list(LANGUAGE_MAP.keys()), 
 selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
-st.subheader("🎙 Ghi âm trực tiếp")
+st.set_page_config(page_title="🎙 RecapNote Recorder", page_icon="🎙")
 
-st_react_mic = components.declare_component(
-    "st_react_mic",
-    url="https://trnghia16509.github.io/st-react-mic-frontend"
+st.title("🎙 Ghi âm & gửi tới Flask Backend")
+
+audio_bytes = audio_recorder(
+    pause_threshold=2.0, 
+    sample_rate=44100, 
+    text="Nhấn để ghi âm"
 )
 
-audio_base64 = st_react_mic(key="mic1")
+if audio_bytes:
+    st.audio(audio_bytes, format="audio/wav")
+    
+    if st.button("📤 Gửi tới Flask xử lý"):
+        with st.spinner("Đang gửi file..."):
+            files = {
+                "file": ("recording.wav", audio_bytes, "audio/wav")
+            }
+            data = {
+                "language_code": "vi"  # hoặc "auto"
+            }
+            try:
+                res = requests.post(
+                    "https://flask-recapnote.onrender.com/process_file",
+                    files=files,
+                    data=data,
+                    timeout=120
+                )
+                if res.ok:
+                    result = res.json()
+                    st.success("✅ Kết quả từ backend")
+                    st.write("**Chủ đề:**", result["subject"])
+                    st.write("**Tóm tắt:**", result["summary"])
+                    st.write("**File gốc:**", result["file_url"])
+                    st.write("**JSON kết quả:**", result["json_url"])
+                else:
+                    st.error(f"Lỗi {res.status_code}: {res.text}")
+            except Exception as e:
+                st.error(f"Lỗi kết nối: {e}")
 
-if audio_base64:
-    st.audio(audio_base64, format="audio/wav")
-    st.success("🎉 Ghi âm xong!")
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
 
