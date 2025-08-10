@@ -210,7 +210,7 @@ def login():
         else:
             st.error("Sai tài khoản hoặc mật khẩu.")
 
-    # Đăng nhập với Google
+    # Nút đăng nhập Google
     google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
     params = {
         "client_id": GOOGLE_CLIENT_ID,
@@ -221,7 +221,29 @@ def login():
         "prompt": "consent"
     }
     auth_link = f"{google_auth_url}?{urlencode(params)}"
-    st.markdown(f"[🔐 Đăng nhập với Google]({auth_link})")
+
+    st.markdown(
+        f"""
+        <a href="{auth_link}">
+            <button style="
+                background-color: #4285F4;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                font-size: 16px;
+                border-radius: 5px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            ">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/4f/Google_%22G%22_Logo.svg" width="20">
+                Đăng nhập với Google
+            </button>
+        </a>
+        """,
+        unsafe_allow_html=True
+    )
 
     # Quên mật khẩu
     if st.button("Quên mật khẩu?", key="forgot_btn"):
