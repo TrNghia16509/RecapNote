@@ -370,6 +370,7 @@ else:
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
+MODEL_NAME = "gemini-1.5-flash"  # Đổi sang model hợp lệ
 
 # DB local để lưu metadata
 conn = sqlite3.connect("notes.db", check_same_thread=False)
@@ -393,58 +394,67 @@ file = st.file_uploader("Chọn file (.mp3, .wav, .pdf, .docx)", type=["mp3", "w
 
 if file:
     with st.spinner("⏳ Đang xử lý..."):
-        # resp = requests.post(f"{API_URL}/process_file", files=files)
-        # Khi gửi request
         res = requests.post(
             f"{API_URL}/process_file",
-            files = {"file": (file.name, file, file.type)},
-            data={"language_code": selected_lang_code},  # Gửi mã ngôn ngữ
-            timeout=None,   # Không giới hạn thời gian chờ
-            stream=True     # Hỗ trợ streaming kết quả
+            files={"file": (file.name, file, file.type)},
+            data={"language_code": selected_lang_code},
+            timeout=None,
+            stream=True
         )
 
     if res.status_code == 200:
         data = res.json()
+
+        subject = data["subject"]
+        summary = data["summary"]
+        full_text = data["full_text"]
+
         st.subheader("📌 Chủ đề")
-        st.write(data["subject"])
+        st.write(subject)
         st.subheader("📚 Tóm tắt")
-        st.write(data["summary"])
+        st.write(summary)
         st.subheader("📄 Nội dung")
-        st.text_area("", data["full_text"], height=300, label_visibility="collapsed")
+        st.text_area("", full_text, height=300, label_visibility="collapsed")
 
         # Chatbot
         st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
         if "chat" not in st.session_state:
             st.session_state.chat = []
+
         for msg in st.session_state.chat:
             st.chat_message(msg["role"]).write(msg["content"])
+
         q = st.chat_input("Nhập câu hỏi...")
         if q:
             st.chat_message("user").write(q)
-            ai = model.start_chat(history=[{"role": "user", "parts": text_result}])
+
+            # Khởi tạo model và chat
+            model = genai.GenerativeModel(MODEL_NAME)
+            ai = model.start_chat(history=[{"role": "user", "parts": [full_text]}])
             r = ai.send_message(q)
+
             st.chat_message("assistant").write(r.text)
             st.session_state.chat.append({"role": "user", "content": q})
             st.session_state.chat.append({"role": "assistant", "content": r.text})
-                
+
         if st.session_state.logged_in:
-                if st.button("💾 Lưu ghi chú"):
-                    json_file_name = data["json_url"].split("/")[-2] + "/" + data["json_url"].split("/")[-1]
-                    c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
-                        st.session_state.username,
-                        data["subject"],
-                        data["subject"],
-                        data["summary"],
-                        json_file_name,  # chỉ lưu tên file
-                        datetime.now().isoformat()
-                    ))
-                    conn.commit()
-                    st.success("Đã lưu!")
+            if st.button("💾 Lưu ghi chú"):
+                json_file_name = data["json_url"].split("/")[-2] + "/" + data["json_url"].split("/")[-1]
+                c.execute("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?)", (
+                    st.session_state.username,
+                    subject,
+                    subject,
+                    summary,
+                    json_file_name,
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+                st.success("Đã lưu!")
         else:
             st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
     else:
         st.error(f"Lỗi: {res.text}")
-
+        
 # ========= Hiển thị ghi chú =========
 if st.session_state.logged_in:
     st.subheader("📂 Ghi chú đã lưu")
