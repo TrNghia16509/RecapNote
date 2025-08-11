@@ -9,7 +9,6 @@ import wave
 import numpy as np
 import queue
 import threading
-import google.generativeai as genai
 import docx
 from io import BytesIO
 import secrets
@@ -27,16 +26,13 @@ import json
 from urllib.parse import urlencode
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
 import av
-#from st_react_mic import st_react_mic
 import streamlit.components.v1 as components
 import base64
 from audio_recorder_streamlit import audio_recorder
 
 # ========= Cấu hình =========
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-model = genai.GenerativeModel("gemini-1.5-flash")
-genai.configure(api_key=GOOGLE_API_KEY)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # 🔹 Dùng Groq API key
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 RESET_URL = os.getenv("RESET_URL")
@@ -49,6 +45,28 @@ bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app")
+
+# Hàm gọi Groq API
+def groq_chat(prompt, history=None, max_tokens=1000):
+    """Gọi Groq API để chat"""
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    messages = []
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": prompt})
+    payload = {
+        "model": "llama3-70b-8192",
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7
+    }
+    res = requests.post(url, headers=headers, json=payload)
+    res.raise_for_status()
+    return res.json()["choices"][0]["message"]["content"].strip()
 
 #================ Khởi tạo session_state ================
 if "recording" not in st.session_state:
@@ -318,12 +336,9 @@ selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 
 # ========== Ghi âm (frontend) ==========
 st.title("🎙 Ghi âm")
-
-# Khởi tạo biến trong session_state
 if "audio_bytes" not in st.session_state:
     st.session_state.audio_bytes = None
 
-# Nếu chưa ghi âm → hiển thị nút ghi âm
 if st.session_state.audio_bytes is None:
     audio_bytes = audio_recorder(
         pause_threshold=2.0,
@@ -333,10 +348,8 @@ if st.session_state.audio_bytes is None:
     if audio_bytes:
         st.session_state.audio_bytes = audio_bytes
 else:
-    # Nếu đã có bản ghi → hiển thị audio player + nút xóa
     st.audio(st.session_state.audio_bytes, format="audio/wav")
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("📤 Xử lý"):
             with st.spinner("Đang gửi file..."):
@@ -362,7 +375,6 @@ else:
                         st.error(f"Lỗi {res.status_code}: {res.text}")
                 except Exception as e:
                     st.error(f"Lỗi kết nối: {e}")
-
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
@@ -370,22 +382,7 @@ else:
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
-MODEL_NAME = "gemini-1.5-flash"  # Đổi sang model hợp lệ
 
-# DB local
-conn = sqlite3.connect("notes.db", check_same_thread=False)
-c = conn.cursor()
-c.execute("""CREATE TABLE IF NOT EXISTS notes (
-    username TEXT,
-    title TEXT,
-    subject TEXT,
-    summary TEXT,
-    json_url TEXT,
-    timestamp TEXT)""")
-conn.commit()
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
@@ -416,7 +413,7 @@ if file:
         st.text_area("", full_text, height=300, label_visibility="collapsed")
 
         # === Chatbot theo từng file ===
-        file_key = f"chat_{file.name}"  # key duy nhất cho từng file
+        file_key = f"chat_{file.name}"  
         if file_key not in st.session_state:
             st.session_state[file_key] = []
 
@@ -427,13 +424,12 @@ if file:
         q = st.chat_input("Nhập câu hỏi...")
         if q:
             st.chat_message("user").write(q)
-            model = genai.GenerativeModel(MODEL_NAME)
-            ai = model.start_chat(history=[{"role": "user", "parts": [full_text]}])
-            r = ai.send_message(q)
-
-            st.chat_message("assistant").write(r.text)
+            answer = groq_chat(q, history=[
+                {"role": "system", "content": f"Bạn là trợ lý AI. Nội dung tài liệu: {full_text}"}
+            ])
+            st.chat_message("assistant").write(answer)
             st.session_state[file_key].append({"role": "user", "content": q})
-            st.session_state[file_key].append({"role": "assistant", "content": r.text})
+            st.session_state[file_key].append({"role": "assistant", "content": answer})
 
         # === Lưu ghi chú nếu đã đăng nhập ===
         if st.session_state.logged_in:
