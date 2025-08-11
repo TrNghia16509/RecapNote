@@ -35,7 +35,7 @@ from audio_recorder_streamlit import audio_recorder
 # ========= Cấu hình =========
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-model = genai.GenerativeModel("gemini-3.5-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")
 genai.configure(api_key=GOOGLE_API_KEY)
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
