@@ -414,7 +414,10 @@ if file:
         st.text_area("", full_text, height=300, label_visibility="collapsed")
 
         # === Chatbot theo từng file ===
-        file_key = f"chat_{file.name}"  
+        GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        file_key = f"chat_{file.name}"
         if file_key not in st.session_state:
             st.session_state[file_key] = []
 
@@ -425,13 +428,22 @@ if file:
         q = st.chat_input("Nhập câu hỏi...")
         if q:
             st.chat_message("user").write(q)
-            answer = groq_chat(q, history=[
-                {"role": "system", "content": f"Bạn là trợ lý AI. Nội dung tài liệu: {summary}"}
-            ])
-            st.chat_message("assistant").write(answer)
-            st.session_state[file_key].append({"role": "user", "content": q})
-            st.session_state[file_key].append({"role": "assistant", "content": answer})
 
+            # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
+            context_prompt = f"""
+            Bạn là trợ lý AI, hãy trả lời câu hỏi dựa trên bản tóm tắt sau:
+            --- Tóm tắt ---
+            {summary}
+            """
+
+            ai = gemini_model.start_chat(history=[
+                {"role": "user", "parts": [context_prompt]}
+            ])
+            r = ai.send_message(q)
+
+            st.chat_message("assistant").write(r.text)
+            st.session_state[file_key].append({"role": "user", "content": q})
+            st.session_state[file_key].append({"role": "assistant", "content": r.text})
         # === Lưu ghi chú nếu đã đăng nhập ===
         if st.session_state.logged_in:
             if st.button("💾 Lưu ghi chú"):
