@@ -426,7 +426,7 @@ if file:
         if q:
             st.chat_message("user").write(q)
             answer = groq_chat(q, history=[
-                {"role": "system", "content": f"Bạn là trợ lý AI. Nội dung tài liệu: {full_text}"}
+                {"role": "system", "content": f"Bạn là trợ lý AI. Nội dung tài liệu: {summary}"}
             ])
             st.chat_message("assistant").write(answer)
             st.session_state[file_key].append({"role": "user", "content": q})
