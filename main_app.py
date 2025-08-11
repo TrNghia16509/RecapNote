@@ -35,6 +35,7 @@ from audio_recorder_streamlit import audio_recorder
 # ========= Cấu hình =========
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+model = genai.GenerativeModel("gemini-3.5-flash")
 genai.configure(api_key=GOOGLE_API_KEY)
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -369,7 +370,6 @@ else:
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
-model = genai.GenerativeModel("gemini-1.5-flash")
 
 # DB local để lưu metadata
 conn = sqlite3.connect("notes.db", check_same_thread=False)
