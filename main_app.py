@@ -369,6 +369,7 @@ else:
 
 # ==================== Tải file =====================
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
+model = genai.GenerativeModel("gemini-3.5-flash")
 
 # DB local để lưu metadata
 conn = sqlite3.connect("notes.db", check_same_thread=False)
