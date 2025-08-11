@@ -372,7 +372,7 @@ else:
 API_URL = os.getenv("FLASK_API_URL", "https://flask-recapnote.onrender.com")
 MODEL_NAME = "gemini-1.5-flash"  # Đổi sang model hợp lệ
 
-# DB local để lưu metadata
+# DB local
 conn = sqlite3.connect("notes.db", check_same_thread=False)
 c = conn.cursor()
 c.execute("""CREATE TABLE IF NOT EXISTS notes (
@@ -404,7 +404,6 @@ if file:
 
     if res.status_code == 200:
         data = res.json()
-
         subject = data["subject"]
         summary = data["summary"]
         full_text = data["full_text"]
@@ -416,27 +415,27 @@ if file:
         st.subheader("📄 Nội dung")
         st.text_area("", full_text, height=300, label_visibility="collapsed")
 
-        # Chatbot
-        st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
-        if "chat" not in st.session_state:
-            st.session_state.chat = []
+        # === Chatbot theo từng file ===
+        file_key = f"chat_{file.name}"  # key duy nhất cho từng file
+        if file_key not in st.session_state:
+            st.session_state[file_key] = []
 
-        for msg in st.session_state.chat:
+        st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
+        for msg in st.session_state[file_key]:
             st.chat_message(msg["role"]).write(msg["content"])
 
         q = st.chat_input("Nhập câu hỏi...")
         if q:
             st.chat_message("user").write(q)
-
-            # Khởi tạo model và chat
             model = genai.GenerativeModel(MODEL_NAME)
             ai = model.start_chat(history=[{"role": "user", "parts": [full_text]}])
             r = ai.send_message(q)
 
             st.chat_message("assistant").write(r.text)
-            st.session_state.chat.append({"role": "user", "content": q})
-            st.session_state.chat.append({"role": "assistant", "content": r.text})
+            st.session_state[file_key].append({"role": "user", "content": q})
+            st.session_state[file_key].append({"role": "assistant", "content": r.text})
 
+        # === Lưu ghi chú nếu đã đăng nhập ===
         if st.session_state.logged_in:
             if st.button("💾 Lưu ghi chú"):
                 json_file_name = data["json_url"].split("/")[-2] + "/" + data["json_url"].split("/")[-1]
