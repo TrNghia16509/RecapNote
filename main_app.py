@@ -30,6 +30,7 @@ import streamlit.components.v1 as components
 import base64
 from audio_recorder_streamlit import audio_recorder
 from groq import Groq
+import google.generativeai as genai
 
 # ========= Cấu hình =========
 load_dotenv()
