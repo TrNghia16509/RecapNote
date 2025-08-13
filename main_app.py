@@ -338,9 +338,10 @@ with st.expander("📘 Hướng dẫn sử dụng (Chi tiết)"):
 
 ## 5. Một số lưu ý
 - **Dung lượng file**: Nên < 100MB để xử lý nhanh.
+- Hiện chưa khả dụng cho file chứa các kí tự đặc biệt (kí tự toán học,.....)
 - **Kết nối mạng ổn định** khi tải file/ghi âm.
 - Nếu gặp lỗi "quá giới hạn API", hãy thử lại sau vài phút.
-- Dữ liệu của bạn được **bảo mật tuyệt đối**, chỉ dùng để xử lý nội dung.
+- Dữ liệu của bạn được **bảo mật**, chỉ dùng để xử lý nội dung.
 
 ---
 💡 **Mẹo sử dụng nhanh**:  
