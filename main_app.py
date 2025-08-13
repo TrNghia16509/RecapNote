@@ -305,20 +305,46 @@ with st.sidebar:
             register()
             
 # ========= Hướng dẫn sử dụng =========
-with st.expander("📘 Hướng dẫn sử dụng"):
+with st.expander("📘 Hướng dẫn sử dụng (Chi tiết)"):
     st.markdown("""
-**1. Tải file hoặc ghi âm trực tiếp**
-- Hỗ trợ định dạng: .mp3, .wav, .pdf, .docx
+## 1. Tải file hoặc ghi âm trực tiếp
+- Ở **góc trên cùng hoặc khu vực chính của trang**, bạn sẽ thấy nút:
+  - **📂 "Chọn file"** hoặc **"Tải file"** → bấm để chọn tệp từ máy tính.
+  - **🎤 "Ghi âm"** → bấm để ghi âm trực tiếp bằng micro (trình duyệt sẽ yêu cầu cấp quyền micro).
+- Hỗ trợ định dạng:
+  - Âm thanh: `.mp3`, `.wav`
+  - Tài liệu: `.pdf`, `.docx`
+- Mẹo: Nếu file quá lớn, hãy chia thành nhiều file nhỏ để xử lý nhanh hơn.
 
-**2. Chọn ngôn ngữ**
-- Gợi ý đúng ngôn ngữ của bài giảng để chuyển văn bản chính xác hơn
+## 2. Chọn ngôn ngữ
+- Ngay dưới ô tải file, bạn sẽ thấy **menu chọn ngôn ngữ**:
+  - Chọn **ngôn ngữ chính** của nội dung (VD: Tiếng Việt, Tiếng Anh…).
+  - Nếu không chắc → chọn **Tự động nhận diện (auto)**.
+- Việc chọn đúng ngôn ngữ giúp **chuyển đổi văn bản chính xác hơn**.
 
-**3. Tóm tắt, lưu và hỏi đáp**
-- Có thể hỏi thêm về nội dung thông qua Chatbox thông minh
+## 3. Xử lý nội dung
+- Sau khi tải file hoặc ghi âm, bấm **"Xử lý" / "Tóm tắt"**.
+- Hệ thống sẽ:
+  1. **Chuyển âm thanh hoặc tài liệu thành văn bản**.
+  2. **Nhận diện chủ đề chính**.
+  3. **Tạo bản tóm tắt ngắn gọn, đầy đủ ý**.
+- Kết quả sẽ hiển thị ngay trên màn hình.
 
-**4. Ghi chú**
-- Nếu chưa đăng nhập, ghi chú sẽ tạm thời và xóa khi đóng web
-- Nếu đã đăng nhập, có thể lưu ghi chú vào hệ thống
+## 4. Lưu và hỏi đáp
+- Bạn có thể:
+  - **Lưu ghi chú** (nếu đã đăng nhập).
+  - **Ghi chú tạm thời** (nếu chưa đăng nhập — sẽ mất khi đóng trang).
+  - **Hỏi thêm qua Chatbox thông minh** về nội dung tệp vừa xử lý.
+
+## 5. Một số lưu ý
+- **Dung lượng file**: Nên < 100MB để xử lý nhanh.
+- **Kết nối mạng ổn định** khi tải file/ghi âm.
+- Nếu gặp lỗi "quá giới hạn API", hãy thử lại sau vài phút.
+- Dữ liệu của bạn được **bảo mật tuyệt đối**, chỉ dùng để xử lý nội dung.
+
+---
+💡 **Mẹo sử dụng nhanh**:  
+📂 Bấm "Chọn file" → chọn tệp → chọn ngôn ngữ → bấm "Xử lý" → chờ tóm tắt → hỏi đáp hoặc lưu ghi chú.
 """)
 
 # ========= Chọn ngôn ngữ =========
