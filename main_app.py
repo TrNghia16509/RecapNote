@@ -406,36 +406,36 @@ else:
                     else:
                         st.error(f"Lỗi")
                         
-                # === Chatbot theo từng file ===
-                file_key = f"chat_{file.name}"
-                if file_key not in st.session_state:
-                st.session_state[file_key] = []
+            # === Chatbot theo từng file ===
+            file_key = f"chat_{file.name}"
+            if file_key not in st.session_state:
+            st.session_state[file_key] = []
 
-                st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
-                for msg in st.session_state[file_key]:
-                    st.chat_message(msg["role"]).write(msg["content"])
+            st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
+            for msg in st.session_state[file_key]:
+                st.chat_message(msg["role"]).write(msg["content"])
 
-                q = st.chat_input("Nhập câu hỏi...")
-                if q:
-                    st.chat_message("user").write(q)
+            q = st.chat_input("Nhập câu hỏi...")
+            if q:
+                st.chat_message("user").write(q)
 
-                    # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
-                    context_prompt = f"""
-                    Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
-                    --- Tóm tắt ---
-                    {summary}
-                    """
+                # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
+                context_prompt = f"""
+                Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
+                --- Tóm tắt ---
+                {summary}
+                """
 
-                ai = gemini_model.start_chat(history=[
-                        {"role": "user", "parts": [context_prompt]}
-                    ])
-                r = ai.send_message(q)
+            ai = gemini_model.start_chat(history=[
+                    {"role": "user", "parts": [context_prompt]}
+                ])
+            r = ai.send_message(q)
 
-                st.chat_message("assistant").write(r.text)
-                st.session_state[file_key].append({"role": "user", "content": q})
-                st.session_state[file_key].append({"role": "assistant", "content": r.text})
-             except Exception as e:
-                st.error(f"Lỗi kết nối")
+            st.chat_message("assistant").write(r.text)
+            st.session_state[file_key].append({"role": "user", "content": q})
+            st.session_state[file_key].append({"role": "assistant", "content": r.text})
+        except Exception as e:
+            st.error(f"Lỗi kết nối")
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
