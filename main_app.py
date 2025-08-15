@@ -130,7 +130,7 @@ Nếu bạn không yêu cầu, vui lòng bỏ qua email này.
 Trân trọng,
 RecapNote""")
 
-    msg["Subject"] = "🔐 Khôi phục mật khẩu RecapNote"
+    msg["Subject"] = "🔐 Khôi phục mật khẩu"
     msg["From"] = EMAIL_ADDRESS
     msg["To"] = email
 
@@ -405,6 +405,8 @@ else:
                         st.write("**Tóm tắt:**", result["summary"])
                     else:
                         st.error(f"Lỗi")
+                except Exception:
+                    None
                         
             # === Chatbot theo từng file ===
             file_key = f"chat_{file.name}"
