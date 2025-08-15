@@ -415,8 +415,8 @@ else:
                 except Exception as e:
                     st.error(f"Lỗi kết nối")
             
-        # === Chatbot theo từng file ===
-            file_key = f"chat_{file.name}"
+            # === Chatbot theo từng file ===
+            file_key = f"chat_{result["subject"]}"
             if file_key not in st.session_state:
                 st.session_state[file_key] = []
 
