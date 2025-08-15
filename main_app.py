@@ -379,6 +379,7 @@ if st.session_state.audio_bytes is None:
 else:
     st.audio(st.session_state.audio_bytes, format="audio/wav")
     col1, col2 = st.columns(2)
+
     with col1:
         if st.button("📤 Xử lý"):
             with st.spinner("Đang gửi file..."):
@@ -398,26 +399,29 @@ else:
                     if res.ok:
                         result = res.json()
                         st.success("✅ Hoàn thành")
-                        # 📄 Hiển thị văn bản đã chuyển đổi từ ghi âm
+                        
+                        # Hiển thị văn bản đã chuyển đổi
                         st.markdown("### 📄 Văn bản đã chuyển đổi")
                         st.write(result["full_text"])
 
-                        # Lưu transcript để dùng cho chatbot
+                        # Lưu để dùng cho chatbot
                         summary = result["summary"]
                         subject = result["subject"]
                         
-                        st.write("**Chủ đề:**", result["subject"])
-                        st.write("**Tóm tắt:**", result["summary"])
+                        st.write("**Chủ đề:**", subject)
+                        st.write("**Tóm tắt:**", summary)
+
+                        # Lưu vào session
+                        st.session_state["summary"] = summary
+                        st.session_state["subject"] = subject
                     else:
-                        st.error(f"Lỗi")
+                        st.error(f"Lỗi: {res.text}")
                 except Exception as e:
-                    st.error(f"Lỗi kết nối")
-            
-            # === Chatbot theo từng file ===
-            GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-            genai.configure(api_key=GEMINI_API_KEY)
-            gemini_model = genai.GenerativeModel("gemini-1.5-flash")
-            file_key = f"chat_recording_{subject}"
+                    st.error(f"Lỗi kết nối: {e}")
+
+        # === Chatbot theo từng file ===
+        if "summary" in st.session_state:
+            file_key = f"chat_recording_{st.session_state['subject']}"
             if file_key not in st.session_state:
                 st.session_state[file_key] = []
 
@@ -429,25 +433,27 @@ else:
             if q:
                 st.chat_message("user").write(q)
 
-                # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
+                # Tạo prompt dựa trên summary
                 context_prompt = f"""
                 Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
                 --- Tóm tắt ---
-                {summary}
+                {st.session_state['summary']}
                 """
 
-            ai = gemini_model.start_chat(history=[
-                    {"role": "user", "parts": [context_prompt]}
-                ])
-            r = ai.send_message(q)
+                ai = gemini_model.start_chat(history=[
+                        {"role": "user", "parts": [context_prompt]}
+                    ])
+                r = ai.send_message(q)
 
-            st.chat_message("assistant").write(r.text)
-            st.session_state[file_key].append({"role": "user", "content": q})
-            st.session_state[file_key].append({"role": "assistant", "content": r.text})
-            
+                st.chat_message("assistant").write(r.text)
+                st.session_state[file_key].append({"role": "user", "content": q})
+                st.session_state[file_key].append({"role": "assistant", "content": r.text})
+
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
+            st.session_state.pop("summary", None)
+            st.session_state.pop("subject", None)
             st.rerun()
 
 # ==================== Tải file =====================
