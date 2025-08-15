@@ -401,9 +401,40 @@ else:
                         st.write("**Chủ đề:**", result["subject"])
                         st.write("**Tóm tắt:**", result["summary"])
                     else:
-                        st.error(f"Lỗi {res.status_code}: {res.text}")
-                except Exception as e:
-                    st.error(f"Lỗi kết nối: {e}")
+                        st.error(f"Lỗi")
+                # === Chatbot theo từng file ===
+                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+                genai.configure(api_key=GEMINI_API_KEY)
+                gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+                file_key = f"chat_{file.name}"
+                if file_key not in st.session_state:
+                st.session_state[file_key] = []
+
+                st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
+                for msg in st.session_state[file_key]:
+                    st.chat_message(msg["role"]).write(msg["content"])
+
+                q = st.chat_input("Nhập câu hỏi...")
+                if q:
+                    st.chat_message("user").write(q)
+
+                    # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
+                    context_prompt = f"""
+                    Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
+                    --- Tóm tắt ---
+                    {summary}
+                    """
+
+                ai = gemini_model.start_chat(history=[
+                        {"role": "user", "parts": [context_prompt]}
+                    ])
+                r = ai.send_message(q)
+
+                st.chat_message("assistant").write(r.text)
+                st.session_state[file_key].append({"role": "user", "content": q})
+                st.session_state[file_key].append({"role": "assistant", "content": r.text})
+             except Exception as e:
+                st.error(f"Lỗi kết nối")
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
@@ -459,7 +490,7 @@ if file:
 
             # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
             context_prompt = f"""
-            Bạn là trợ lý AI, hãy trả lời câu hỏi dựa trên bản tóm tắt sau:
+            Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
             --- Tóm tắt ---
             {summary}
             """
