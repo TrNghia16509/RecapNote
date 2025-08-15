@@ -47,6 +47,9 @@ bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app")
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Hàm gọi Groq API
 def groq_chat(prompt, history=None, max_tokens=1000):
@@ -402,10 +405,8 @@ else:
                         st.write("**Tóm tắt:**", result["summary"])
                     else:
                         st.error(f"Lỗi")
+                        
                 # === Chatbot theo từng file ===
-                GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-                genai.configure(api_key=GEMINI_API_KEY)
-                gemini_model = genai.GenerativeModel("gemini-1.5-flash")
                 file_key = f"chat_{file.name}"
                 if file_key not in st.session_state:
                 st.session_state[file_key] = []
@@ -473,9 +474,6 @@ if file:
         st.text_area("", full_text, height=300, label_visibility="collapsed")
 
         # === Chatbot theo từng file ===
-        GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-        genai.configure(api_key=GEMINI_API_KEY)
-        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
         file_key = f"chat_{file.name}"
         if file_key not in st.session_state:
             st.session_state[file_key] = []
@@ -545,9 +543,9 @@ if st.session_state.logged_in:
                             if json_data.get("file_url"):
                                 st.markdown(f"[📂 Tải file gốc]({json_data['file_url']})")
                         else:
-                            st.error("Không lấy được link JSON từ backend.")
+                            st.error("Lỗi")
                     except Exception as e:
-                        st.error(f"❌ Lỗi tải file JSON: {e}")
+                        st.error(f"❌ Lỗi")
             else:
                 st.warning("⚠️ Ghi chú này chưa có file JSON.")
 # ============ Chạy ==================
