@@ -437,34 +437,34 @@ else:
                 except Exception as e:
                     st.error(f"Lỗi")
                 # === Chatbot theo từng file ===
-                        if "summary" in st.session_state:
-                        file_key = f"chat_recording_{st.session_state['subject']}"
-                        if file_key not in st.session_state:
-                            st.session_state[file_key] = []
+                if "summary" in st.session_state:
+                file_key = f"chat_recording_{st.session_state['subject']}"
+                if file_key not in st.session_state:
+                    st.session_state[file_key] = []
 
-                        st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
-                        for msg in st.session_state[file_key]:
-                            st.chat_message(msg["role"]).write(msg["content"])
+                st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
+                for msg in st.session_state[file_key]:
+                    st.chat_message(msg["role"]).write(msg["content"])
 
-                        q = st.chat_input("Nhập câu hỏi...")
-                        if q:
-                            st.chat_message("user").write(q)
+                q = st.chat_input("Nhập câu hỏi...")
+                if q:
+                    st.chat_message("user").write(q)
 
-                            # Tạo prompt dựa trên summary
-                            context_prompt = f"""
-                            Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
-                            --- Tóm tắt ---
-                            {st.session_state['summary']}
-                            """
+                    # Tạo prompt dựa trên summary
+                    context_prompt = f"""
+                    Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
+                    --- Tóm tắt ---
+                    {st.session_state['summary']}
+                    """
 
-                            ai = gemini_model.start_chat(history=[
-                                {"role": "user", "parts": [context_prompt]}
-                            ])
-                            r = ai.send_message(q)
+                    ai = gemini_model.start_chat(history=[
+                        {"role": "user", "parts": [context_prompt]}
+                    ])
+                    r = ai.send_message(q)
 
-                        st.chat_message("assistant").write(r.text)
-                        st.session_state[file_key].append({"role": "user", "content": q})
-                        st.session_state[file_key].append({"role": "assistant", "content": r.text})    
+                st.chat_message("assistant").write(r.text)
+                st.session_state[file_key].append({"role": "user", "content": q})
+                st.session_state[file_key].append({"role": "assistant", "content": r.text})    
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
