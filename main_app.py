@@ -411,7 +411,7 @@ else:
             # === Chatbot theo từng file ===
             file_key = f"chat_{file.name}"
             if file_key not in st.session_state:
-            st.session_state[file_key] = []
+                st.session_state[file_key] = []
 
             st.markdown("### 🤖 Hỏi gì thêm về nội dung?")
             for msg in st.session_state[file_key]:
