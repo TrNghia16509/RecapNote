@@ -407,6 +407,7 @@ else:
 
                         # Lưu transcript để dùng cho chatbot
                         summary = result["summary"]
+                        subject = result["subject"]
                         
                         st.write("**Chủ đề:**", result["subject"])
                         st.write("**Tóm tắt:**", result["summary"])
@@ -416,7 +417,7 @@ else:
                     st.error(f"Lỗi kết nối")
             
             # === Chatbot theo từng file ===
-            file_key = f"chat_{result["subject"]}"
+            file_key = f"chat_recording_{subject}"
             if file_key not in st.session_state:
                 st.session_state[file_key] = []
 
