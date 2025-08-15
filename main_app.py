@@ -414,6 +414,16 @@ else:
                         # Lưu vào session
                         st.session_state["summary"] = summary
                         st.session_state["subject"] = subject
+                        st.session_state["full_text"] = result["full_text"]
+
+                        # Nút lưu ghi chú
+                        if st.button("💾 Lưu ghi chú"):
+                            st.session_state["notes"].append({
+                                "subject": subject,
+                                "summary": summary,
+                                "full_text": result["full_text"]
+                            })
+                            st.success("📝 Ghi chú đã được lưu!")
                     else:
                         st.error(f"Lỗi")
                 except Exception as e:
