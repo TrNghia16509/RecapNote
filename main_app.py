@@ -213,8 +213,8 @@ if "code" in query_params and not st.session_state.get("logged_in", False):
 
         st.success(f"✅ Đăng nhập Google thành công! Xin chào {st.session_state.username}")
         st.rerun()
-    else:
-        st.error("❌ Không lấy được access token từ Google.")
+    #else:
+    #    st.error("❌ Bị lỗi.")
         
 # ================== Login / Register ==================
 def login():
