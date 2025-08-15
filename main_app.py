@@ -380,7 +380,8 @@ if st.session_state.audio_bytes is None:
         st.session_state.audio_bytes = audio_bytes
         st.session_state.recording_done = True
         st.rerun()
-        st.spinner("Đang chuẩn bị...")
+        with st.spinner("Đang chuẩn bị..."):
+            None
 else:
     st.audio(st.session_state.audio_bytes, format="audio/wav")
     col1, col2 = st.columns(2)
