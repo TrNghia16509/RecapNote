@@ -415,9 +415,9 @@ else:
                         st.session_state["summary"] = summary
                         st.session_state["subject"] = subject
                     else:
-                        st.error(f"Lỗi: {res.text}")
+                        st.error(f"Lỗi")
                 except Exception as e:
-                    st.error(f"Lỗi kết nối: {e}")
+                    st.error(f"Lỗi")
 
         # === Chatbot theo từng file ===
         if "summary" in st.session_state:
