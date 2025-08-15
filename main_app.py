@@ -367,6 +367,8 @@ selected_lang_code = LANGUAGE_MAP[selected_lang_name]
 st.title("🎙 Ghi âm")
 if "audio_bytes" not in st.session_state:
     st.session_state.audio_bytes = None
+if "recording_done" not in st.session_state:
+    st.session_state.recording_done = False
 
 if st.session_state.audio_bytes is None:
     audio_bytes = audio_recorder(
@@ -376,6 +378,8 @@ if st.session_state.audio_bytes is None:
     )
     if audio_bytes:
         st.session_state.audio_bytes = audio_bytes
+        st.session_state.recording_done = True
+        st.rerun()
 else:
     st.audio(st.session_state.audio_bytes, format="audio/wav")
     col1, col2 = st.columns(2)
