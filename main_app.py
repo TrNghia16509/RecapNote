@@ -405,10 +405,10 @@ else:
                         st.write("**Tóm tắt:**", result["summary"])
                     else:
                         st.error(f"Lỗi")
-                except Exception:
-                    None
-                        
-            # === Chatbot theo từng file ===
+        except Exception as e:
+            st.error(f"Lỗi kết nối")
+            
+        # === Chatbot theo từng file ===
             file_key = f"chat_{file.name}"
             if file_key not in st.session_state:
                 st.session_state[file_key] = []
@@ -436,8 +436,6 @@ else:
             st.chat_message("assistant").write(r.text)
             st.session_state[file_key].append({"role": "user", "content": q})
             st.session_state[file_key].append({"role": "assistant", "content": r.text})
-        except Exception as e:
-            st.error(f"Lỗi kết nối")
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
