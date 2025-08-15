@@ -400,13 +400,20 @@ else:
                     )
                     if res.ok:
                         result = res.json()
-                        st.success("✅ Kết quả")
+                        st.success("✅ Hoàn thành")
+                        # 📄 Hiển thị văn bản đã chuyển đổi từ ghi âm
+                        st.markdown("### 📄 Văn bản đã chuyển đổi")
+                        st.write(result["full_text"])
+
+                        # Lưu transcript để dùng cho chatbot
+                        summary = result["summary"]
+                        
                         st.write("**Chủ đề:**", result["subject"])
                         st.write("**Tóm tắt:**", result["summary"])
                     else:
                         st.error(f"Lỗi")
-        except Exception as e:
-            st.error(f"Lỗi kết nối")
+                except Exception as e:
+                    st.error(f"Lỗi kết nối")
             
         # === Chatbot theo từng file ===
             file_key = f"chat_{file.name}"
