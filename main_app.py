@@ -432,7 +432,11 @@ else:
                                     "full_text": result["full_text"]
                                 })
                                 st.success("📝 Ghi chú đã được lưu!")
-                        # === Chatbot theo từng file ===
+                    else:
+                        st.error(f"Lỗi")
+                except Exception as e:
+                    st.error(f"Lỗi")
+                # === Chatbot theo từng file ===
                         if "summary" in st.session_state:
                         file_key = f"chat_recording_{st.session_state['subject']}"
                         if file_key not in st.session_state:
@@ -460,12 +464,7 @@ else:
 
                         st.chat_message("assistant").write(r.text)
                         st.session_state[file_key].append({"role": "user", "content": q})
-                        st.session_state[file_key].append({"role": "assistant", "content": r.text})
-                    else:
-                        st.error(f"Lỗi")
-                except Exception as e:
-                    st.error(f"Lỗi")
-                    
+                        st.session_state[file_key].append({"role": "assistant", "content": r.text})    
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
