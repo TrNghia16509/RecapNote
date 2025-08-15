@@ -394,7 +394,7 @@ else:
                         "https://flask-recapnote.onrender.com/process_file",
                         files=files,
                         data=data,
-                        timeout=120
+                        timeout= None #120
                     )
                     if res.ok:
                         result = res.json()
