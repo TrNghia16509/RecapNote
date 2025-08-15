@@ -380,13 +380,14 @@ if st.session_state.audio_bytes is None:
         st.session_state.audio_bytes = audio_bytes
         st.session_state.recording_done = True
         st.rerun()
+        st.spinner("Đang chuẩn bị...")
 else:
     st.audio(st.session_state.audio_bytes, format="audio/wav")
     col1, col2 = st.columns(2)
 
     with col1:
         if st.button("📤 Xử lý"):
-            with st.spinner("Đang gửi file..."):
+            with st.spinner("Đang xử lý..."):
                 files = {
                     "file": ("recording.wav", st.session_state.audio_bytes, "audio/wav")
                 }
@@ -421,13 +422,14 @@ else:
                         st.session_state["full_text"] = result["full_text"]
 
                         # Nút lưu ghi chú
-                        if st.button("💾 Lưu ghi chú"):
-                            st.session_state["notes"].append({
-                                "subject": subject,
-                                "summary": summary,
-                                "full_text": result["full_text"]
-                            })
-                            st.success("📝 Ghi chú đã được lưu!")
+                        if st.session_state.logged_in:
+                            if st.button("💾 Lưu ghi chú"):
+                                st.session_state["notes"].append({
+                                    "subject": subject,
+                                    "summary": summary,
+                                    "full_text": result["full_text"]
+                                })
+                                st.success("📝 Ghi chú đã được lưu!")
                     else:
                         st.error(f"Lỗi")
                 except Exception as e:
