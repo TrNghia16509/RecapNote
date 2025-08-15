@@ -47,9 +47,6 @@ bucket = b2_api.get_bucket_by_name(os.getenv("B2_BUCKET_NAME"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://recapnote.up.railway.app")
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
-gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Hàm gọi Groq API
 def groq_chat(prompt, history=None, max_tokens=1000):
@@ -417,6 +414,9 @@ else:
                     st.error(f"Lỗi kết nối")
             
             # === Chatbot theo từng file ===
+            GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+            genai.configure(api_key=GEMINI_API_KEY)
+            gemini_model = genai.GenerativeModel("gemini-1.5-flash")
             file_key = f"chat_recording_{subject}"
             if file_key not in st.session_state:
                 st.session_state[file_key] = []
@@ -444,6 +444,7 @@ else:
             st.chat_message("assistant").write(r.text)
             st.session_state[file_key].append({"role": "user", "content": q})
             st.session_state[file_key].append({"role": "assistant", "content": r.text})
+            
     with col2:
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
@@ -482,6 +483,9 @@ if file:
         st.text_area("", full_text, height=300, label_visibility="collapsed")
 
         # === Chatbot theo từng file ===
+        GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
         file_key = f"chat_{file.name}"
         if file_key not in st.session_state:
             st.session_state[file_key] = []
