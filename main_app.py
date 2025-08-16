@@ -394,9 +394,9 @@ else:
                     "file": ("recording.wav", st.session_state.audio_bytes, "audio/wav")
                 }
                 data = {
-                    "language_code": selected_lang_code
+                    "language_code": selected_lang_code,
                     "language_name": selected_lang_name
-                },
+                }
                 try:
                     res = requests.post(
                         "https://flask-recapnote.onrender.com/process_file",
