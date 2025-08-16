@@ -454,7 +454,7 @@ else:
 
                         # Tạo prompt dựa trên summary
                         context_prompt = f"""
-                        Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
+                        Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_name} dựa trên bản tóm tắt sau:
                         --- Tóm tắt ---
                         {st.session_state['summary']}
                         """
@@ -525,7 +525,7 @@ if file:
 
             # Gửi cho Gemini, chỉ dùng summary để tránh lỗi 413
             context_prompt = f"""
-            Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_code} dựa trên bản tóm tắt sau:
+            Bạn là trợ lý AI, hãy trả lời câu hỏi bằng {selected_lang_name} dựa trên bản tóm tắt sau:
             --- Tóm tắt ---
             {summary}
             """
@@ -555,7 +555,7 @@ if file:
         else:
             st.info("🔒 Ghi chú tạm thời - hãy đăng nhập để lưu vĩnh viễn")
     else:
-        st.error(f"Lỗi: {res.text}")
+        st.error(f"Lỗi")
         
 # ========= Hiển thị ghi chú =========
 if st.session_state.logged_in:
