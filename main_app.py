@@ -464,10 +464,10 @@ else:
                         ])
                         r = ai.send_message(q)
 
-                    st.chat_message("assistant").write(r.text)
-                    st.session_state[file_key].append({"role": "user", "content": q})
-                    st.session_state[file_key].append({"role": "assistant", "content": r.text})    
-    with col2:
+                        st.chat_message("assistant").write(r.text)
+                        st.session_state[file_key].append({"role": "user", "content": q})
+                        st.session_state[file_key].append({"role": "assistant", "content": r.text})    
+    with col2:    
         if st.button("🗑 Xóa bản ghi"):
             st.session_state.audio_bytes = None
             st.session_state.pop("summary", None)
