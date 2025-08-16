@@ -479,7 +479,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 st.header("📤 Tải file để xử lý")
-file = st.file_uploader("Chọn file (.mp3, .wav, .pdf, .docx)", type=["mp3", "wav", "pdf", "docx"])
+file = st.file_uploader("Chọn file (.mp3, .wav, .pdf, .docx, .m4a)", type=["mp3", "wav", "pdf", "docx", "m4a"])
 
 if file:
     with st.spinner("⏳ Đang xử lý..."):
