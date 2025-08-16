@@ -395,6 +395,7 @@ else:
                 }
                 data = {
                     "language_code": selected_lang_code
+                    "language_name": selected_lang_name
                 }
                 try:
                     res = requests.post(
@@ -409,7 +410,8 @@ else:
                         
                         # Hiển thị văn bản đã chuyển đổi
                         st.markdown("### 📄 Văn bản đã chuyển đổi")
-                        st.write(result["full_text"])
+                        # st.write(result["full_text"])
+                        st.text_area("", result["full_text"], height=300, label_visibility="collapsed")
 
                         # Lưu để dùng cho chatbot
                         summary = result["summary"]
@@ -486,7 +488,8 @@ if file:
         res = requests.post(
             f"{API_URL}/process_file",
             files={"file": (file.name, file, file.type)},
-            data={"language_code": selected_lang_code},
+            data={"language_code": selected_lang_code
+            "language_name": selected_lang_name},
             timeout=None,
             stream=True
         )
@@ -581,7 +584,7 @@ if st.session_state.logged_in:
                     except Exception as e:
                         st.error(f"❌ Lỗi")
             else:
-                st.warning("⚠️ Ghi chú này chưa có file JSON.")
+                st.warning("⚠️ Ghi chú này chưa có.")
 # ============ Chạy ==================
 port = int(os.environ.get("PORT", 8501))
 
