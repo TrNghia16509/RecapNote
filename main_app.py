@@ -488,7 +488,7 @@ if file:
         res = requests.post(
             f"{API_URL}/process_file",
             files={"file": (file.name, file, file.type)},
-            data={"language_code": selected_lang_code
+            data={"language_code": selected_lang_code,
             "language_name": selected_lang_name},
             timeout=None,
             stream=True
