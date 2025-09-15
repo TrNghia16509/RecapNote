@@ -25,7 +25,7 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   transcriptDiv.innerText = "⏳ Đang xử lý...";
 
   try {
-    const response = await fetch("https://api-gateway-ovql.onrender.com/submit", {
+    const response = await fetch("https://flask-recapnote.onrender.com/process_file", {
       method: "POST",
       body: formData
     });
@@ -66,7 +66,7 @@ startBtn.addEventListener("click", async () => {
     document.getElementById("transcript").innerText = "⏳ Đang xử lý ghi âm...";
 
     try {
-      const response = await fetch("https://api-gateway-ovql.onrender.com/submit", {
+      const response = await fetch("https://flask-recapnote.onrender.com/process_file", {
         method: "POST",
         body: formData
       });
@@ -117,7 +117,7 @@ document.getElementById("sendChat").addEventListener("click", async () => {
   msgInput.value = "";
 
   // Gửi API chatbot
-  const res = await fetch("https://api-gateway-ovql.onrender.com/chat", {
+  const res = await fetch("https://flask-recapnote.onrender.com/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question: message })
