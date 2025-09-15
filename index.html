@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RecapNote - Tóm tắt ghi chú bằng giọng nói</title>
+  <link rel="stylesheet" href="style.css" />
+  
+  <!-- Định nghĩa callback trước -->
+  <script>
+    function handleCredentialResponse(response) {
+      try {
+        console.log("ID Token:", response.credential);
+        const data = JSON.parse(atob(response.credential.split('.')[1]));
+        console.log("User Info:", data);
+
+        // Thêm hiển thị user vào header thay vì append lung tung
+        const nav = document.querySelector("nav");
+        const userInfo = document.createElement("span");
+        userInfo.textContent = `👋 Xin chào, ${data.name}`;
+        nav.appendChild(userInfo);
+      } catch (err) {
+        console.error("Google Login error:", err);
+        alert("Đăng nhập Google thất bại!");
+      }
+    }
+  </script>
+
+  <!-- Script Google Identity -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="left-section">
+      <img src="https://raw.githubusercontent.com/trungnghia-secondary/RecapNote/main/RECAPNOTE-LOGO-Color.png" alt="RecapNote Logo" class="logo-img" height="150">
+      <span class="logo-text">RecapNote</span>
+      <nav>
+        <button class = "nav-button" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
+           Chi tiết
+        </button>
+        <button class = "nav-button-outline" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">
+          Giá cả
+        </button>
+      </nav>
+    </div>
+    <div class="right-section">
+    <!-- Google Sign-in button (thu gọn) -->
+     <div id="g_id_onload"
+       data-client_id="872966006027-6l69b4h3nnjjnptdbcv3ebksre6oo9l1.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse">
+     </div>
+     <div id="googleLogin" class="g_id_signin" data-type="standard"></div>
+
+     <!-- Logout button (ẩn mặc định) -->
+     <button id="logoutBtn" style="display:none;" class="btn btn-outline">Đăng xuất</button>
+
+     <script>
+      // Xử lý callback khi Google login thành công
+      function handleCredentialResponse(response) {
+      console.log("Encoded JWT ID token: " + response.credential);
+
+      // Giả sử bạn decode token để lấy email/user name
+      localStorage.setItem("userLoggedIn", "true");
+
+      // Ẩn nút login, hiện logout
+      document.getElementById("googleLogin").style.display = "none";
+      document.getElementById("logoutBtn").style.display = "inline-block";
+      }
+
+      // Khi load lại trang, kiểm tra trạng thái
+      window.onload = function() {
+      if (localStorage.getItem("userLoggedIn") === "true") {
+        document.getElementById("googleLogin").style.display = "none";
+        document.getElementById("logoutBtn").style.display = "inline-block";
+        }
+      };
+
+      // Logout
+      document.getElementById("logoutBtn").addEventListener("click", function() {
+        localStorage.removeItem("userLoggedIn");
+        document.getElementById("googleLogin").style.display = "block";
+        document.getElementById("logoutBtn").style.display = "none";
+      });
+    </script>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>Trợ lí AI tóm tắt</h1>
+    <p>Chuyển đổi giọng nói thành văn bản để xử lí dễ dàng hơn</p>
+  </section>
+
+    <!-- Tabs -->
+  <div class="tab-container">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="upload">📂 Tải file</button>
+      <button class="tab-btn" data-tab="record">🎤 Ghi âm</button>
+    </div>
+
+    <!-- Upload -->
+    <div class="tab-content active" id="upload">
+      <h2>📂 Tải file</h2>
+      <form id="uploadForm">
+        <input type="file" id="fileInput" />
+        <button type="submit" class="btn-primary">Tải lên</button>
+      </form>
+    </div>
+
+    <!-- Record -->
+    <div class="tab-content" id="record">
+      <h2>🎤 Ghi âm</h2>
+      <div class="record-box">
+        <button id="startBtn" class="btn-primary">🎙️ Ghi âm</button>
+        <button id="stopBtn" class="btn-secondary" disabled>⏹️ Dừng</button>
+      </div>
+      <audio id="audioPlayback" controls style="display:none;"></audio>
+    </div>
+  </div>
+
+<div id="transcript" class="output-box"></div>
+  
+<!-- Chatbot Section -->
+<section class="chatbot" id="chatbot" style="display:none;">
+  <h2>🤖 Chatbot AI hỗ trợ</h2>
+  <div id="chat-history"></div>
+  <div class="chat-input">
+    <input type="text" id="chatMessage" placeholder="Nhập câu hỏi...">
+    <button id="sendChat">Gửi</button>
+  </div>
+</section>
+
+  <!-- Features -->
+  <section id = "features" class="features">
+    <h2>Tính năng chính</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">⚡</div>
+        <h3>Tóm tắt nhanh</h3>
+        <p>Phân tích âm thanh, ghi âm và tệp văn bản dài dòng nội dung cốt lõi chỉ trong vài giây</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🌍</div>
+        <h3>Hỗ trợ đa ngôn ngữ</h3>
+        <p>Hỗ trợ nhiều ngôn ngữ, dịch tóm tắt và ghi chú nhanh chỉ bằng một cú nhấp</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">💬</div>
+        <h3>Chatbot AI</h3>
+        <p>Thảo luận và đặt câu hỏi với AI dựa trên nội dung đã tóm tắt để hiểu sâu hơn</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="pricing">
+    <h2>Kế hoạch giá cả linh hoạt</h2>
+    <div class="plans">
+      <div class="plan">
+        <h3>Free</h3>
+        <p>VNĐ0</p>
+        <ul>
+          <li>Chuyển đổi đơn giản</li>
+          <li>Hỗ trợ lên đến 60 phút âm thanh</li>
+        </ul>
+        <button>Có sẵn</button>
+      </div>
+      <div class="plan highlighted">
+        <h3>Plus</h3>
+        <p>VNĐ99.000</p>
+        <ul>
+          <li>Xử lý ưu tiên</li>
+          <li>180 phút âm thanh</li>
+        </ul>
+        <button>Đăng kí ngay</button>
+      </div>
+      <div class="plan">
+        <h3>Premium</h3>
+        <p>VNĐ199.000</p>
+        <ul>
+          <li>Model mạnh mẽ hơn</li>
+          <li>Tính năng nâng cao</li>
+          <li>1 tuần ghi âm và ưu tiên xử lí cao nhất</li>
+        </ul>
+        <button>Đăng kí ngay</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- JS -->
+  <script src="app.js"></script>
+</body>
+</html>
